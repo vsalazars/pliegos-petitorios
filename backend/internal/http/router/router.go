@@ -19,19 +19,22 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	r.Use(gin.Recovery())
 
 	healthHandler := handlers.NewHealthHandler(cfg, pool)
-	adminHandler := handlers.NewAdminHandler()
-
 	userRepo := repository.NewUserRepository(pool)
 	unidadRepo := repository.NewUnidadRepository(pool)
 	rolRepo := repository.NewRolRepository(pool)
 	pliegoRepo := repository.NewPliegoRepository(pool)
 	pliegoPuntoRepo := repository.NewPliegoPuntoRepository(pool)
+	adminHandler := handlers.NewAdminHandler(unidadRepo, pliegoRepo, pliegoPuntoRepo)
 	puntoSeguimientoRepo := repository.NewPuntoSeguimientoRepository(pool)
 	puntoValidacionRepo := repository.NewPuntoValidacionRepository(pool)
+	archivoRepo := repository.NewArchivoRepository(pool)
+	puntoEvidenciaRepo := repository.NewPuntoEvidenciaRepository(pool)
 	prioridadRepo := repository.NewPrioridadRepository(pool)
 	estadoPuntoRepo := repository.NewEstadoPuntoRepository(pool)
 	categoriaPuntoRepo := repository.NewCategoriaPuntoRepository(pool)
 	estadoPliegoRepo := repository.NewEstadoPliegoRepository(pool)
+	tipoEvidenciaRepo := repository.NewTipoEvidenciaRepository(pool)
+	motivoRechazoRepo := repository.NewMotivoRechazoRepository(pool)
 
 	authService := services.NewAuthService(cfg, userRepo)
 	jwtService := services.NewJWTService(cfg)
@@ -45,14 +48,18 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		estadoPuntoRepo,
 		categoriaPuntoRepo,
 		estadoPliegoRepo,
+		tipoEvidenciaRepo,
+		motivoRechazoRepo,
 	)
 
 	pythonParserService := services.NewPythonParserService(cfg.PythonParserURL)
+	fileStorageService := services.NewFileStorageService(cfg.UploadDir)
 
 	pliegoHandler := handlers.NewPliegoHandler(pliegoRepo, pliegoPuntoRepo, pythonParserService)
 	pliegoPuntoHandler := handlers.NewPliegoPuntoHandler(pliegoPuntoRepo)
 	puntoSeguimientoHandler := handlers.NewPuntoSeguimientoHandler(puntoSeguimientoRepo)
 	puntoValidacionHandler := handlers.NewPuntoValidacionHandler(puntoValidacionRepo, pliegoPuntoRepo)
+	puntoEvidenciaHandler := handlers.NewPuntoEvidenciaHandler(puntoEvidenciaRepo, archivoRepo, fileStorageService)
 
 	r.GET("/utils/salud", healthHandler.GetHealth)
 
@@ -93,7 +100,12 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		admin.GET("/pliegos/:id", pliegoHandler.GetByID)
 
 		// PUNTOS DEL PLIEGO - consulta / supervisión
+		admin.GET("/puntos", pliegoPuntoHandler.ListAll)
 		admin.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
+		admin.GET("/puntos/:punto_id/seguimientos", puntoSeguimientoHandler.ListByPuntoIDAdmin)
+		admin.GET("/puntos/:punto_id/evidencias", puntoEvidenciaHandler.ListByPuntoIDAdmin)
+		admin.GET("/puntos/:punto_id/validaciones", puntoValidacionHandler.ListByPuntoIDAdmin)
+		admin.POST("/puntos/:punto_id/validaciones", puntoValidacionHandler.CreateAdmin)
 	}
 
 	// =========================
@@ -116,6 +128,8 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.GET("/catalogos/estados-punto", catalogoHandler.ListEstadosPunto)
 		unidad.GET("/catalogos/categorias-punto", catalogoHandler.ListCategoriasPunto)
 		unidad.GET("/catalogos/estados-pliego", catalogoHandler.ListEstadosPliego)
+		unidad.GET("/catalogos/tipos-evidencia", catalogoHandler.ListTiposEvidencia)
+		unidad.GET("/catalogos/motivos-rechazo", catalogoHandler.ListMotivosRechazo)
 
 		// PUNTOS DEL PLIEGO
 		unidad.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
@@ -125,7 +139,10 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.POST("/pliegos/:id/puntos/:punto_id/seguimientos", puntoSeguimientoHandler.CreateComentario)
 		unidad.GET("/pliegos/:id/puntos/:punto_id/validaciones", puntoValidacionHandler.ListByPuntoID)
 		unidad.GET("/pliegos/:id/puntos/:punto_id/validaciones/vigente", puntoValidacionHandler.GetVigenteByPuntoID)
+		unidad.POST("/pliegos/:id/puntos/:punto_id/responder-validacion", puntoValidacionHandler.ResponderValidacion)
 		unidad.POST("/pliegos/:id/puntos/:punto_id/enviar-validacion", puntoValidacionHandler.EnviarAValidacion)
+		unidad.GET("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.ListByPuntoID)
+		unidad.POST("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.Upload)
 	}
 
 	return r

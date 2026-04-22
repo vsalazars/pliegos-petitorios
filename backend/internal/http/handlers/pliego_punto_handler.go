@@ -38,6 +38,39 @@ func NewPliegoPuntoHandler(pliegoPuntoRepo *repository.PliegoPuntoRepository) *P
 	}
 }
 
+func (h *PliegoPuntoHandler) ListAll(c *gin.Context) {
+	filters := repository.ListPuntosFilters{
+		Query: strings.TrimSpace(c.Query("q")),
+	}
+
+	if unidadID, ok := parseOptionalInt64Query(c, "unidad_id"); ok {
+		filters.UnidadID = unidadID
+	}
+	if estadoPuntoID, ok := parseOptionalInt64Query(c, "estado_punto_id"); ok {
+		filters.EstadoPuntoID = estadoPuntoID
+	}
+	if prioridadID, ok := parseOptionalInt64Query(c, "prioridad_id"); ok {
+		filters.PrioridadID = prioridadID
+	}
+	if categoriaID, ok := parseOptionalInt64Query(c, "categoria_id"); ok {
+		filters.CategoriaID = categoriaID
+	}
+	if requiereValidacion, ok := parseOptionalBoolQuery(c, "requiere_validacion"); ok {
+		filters.RequiereValidacion = requiereValidacion
+	}
+
+	items, err := h.pliegoPuntoRepo.ListAll(c.Request.Context(), filters)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "error listando puntos")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"items": items,
+		"total": len(items),
+	})
+}
+
 func (h *PliegoPuntoHandler) ListByPliegoID(c *gin.Context) {
 
 	pliegoID, ok := parsePliegoIDParamFromPunto(c)
@@ -232,6 +265,40 @@ func parsePliegoIDParamFromPunto(c *gin.Context) (int64, bool) {
 	}
 
 	return id, true
+}
+
+func parseOptionalInt64Query(c *gin.Context, key string) (*int64, bool) {
+	raw := strings.TrimSpace(c.Query(key))
+	if raw == "" {
+		return nil, false
+	}
+
+	value, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || value <= 0 {
+		response.Error(c, http.StatusBadRequest, key+" inválido")
+		return nil, false
+	}
+
+	return &value, true
+}
+
+func parseOptionalBoolQuery(c *gin.Context, key string) (*bool, bool) {
+	raw := strings.TrimSpace(c.Query(key))
+	if raw == "" {
+		return nil, false
+	}
+
+	switch strings.ToLower(raw) {
+	case "true", "1", "si", "sí", "yes":
+		value := true
+		return &value, true
+	case "false", "0", "no":
+		value := false
+		return &value, true
+	default:
+		response.Error(c, http.StatusBadRequest, key+" inválido")
+		return nil, false
+	}
 }
 
 func (h *PliegoPuntoHandler) UpdateCompleto(c *gin.Context) {

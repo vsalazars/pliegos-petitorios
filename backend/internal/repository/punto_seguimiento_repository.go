@@ -93,6 +93,74 @@ func (r *PuntoSeguimientoRepository) ListByPuntoIDAndUnidadID(ctx context.Contex
 	return items, nil
 }
 
+func (r *PuntoSeguimientoRepository) ListByPuntoID(ctx context.Context, puntoID int64) ([]domain.PuntoSeguimientoWithDetalle, error) {
+	const query = `
+		SELECT
+			ps.id,
+			ps.punto_id,
+			ps.usuario_id,
+			ps.tipo_movimiento,
+			ps.comentario,
+			ps.estado_anterior_id,
+			ps.estado_nuevo_id,
+			ps.created_at,
+			u.username,
+			CASE
+				WHEN u.id IS NULL THEN NULL
+				ELSE TRIM(CONCAT(u.nombre, ' ', COALESCE(u.apellido_paterno, ''), ' ', COALESCE(u.apellido_materno, '')))
+			END AS nombre_usuario,
+			ea.clave AS estado_anterior_clave,
+			ea.nombre AS estado_anterior_nombre,
+			en.clave AS estado_nuevo_clave,
+			en.nombre AS estado_nuevo_nombre
+		FROM punto_seguimientos ps
+		LEFT JOIN usuarios u ON u.id = ps.usuario_id
+		LEFT JOIN estados_punto ea ON ea.id = ps.estado_anterior_id
+		LEFT JOIN estados_punto en ON en.id = ps.estado_nuevo_id
+		WHERE ps.punto_id = $1
+		ORDER BY ps.created_at ASC, ps.id ASC;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := r.pool.Query(ctx, query, puntoID)
+	if err != nil {
+		return nil, fmt.Errorf("listar seguimientos por punto: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]domain.PuntoSeguimientoWithDetalle, 0)
+	for rows.Next() {
+		var item domain.PuntoSeguimientoWithDetalle
+		if err := rows.Scan(
+			&item.ID,
+			&item.PuntoID,
+			&item.UsuarioID,
+			&item.TipoMovimiento,
+			&item.Comentario,
+			&item.EstadoAnteriorID,
+			&item.EstadoNuevoID,
+			&item.CreatedAt,
+			&item.Username,
+			&item.NombreUsuario,
+			&item.EstadoAnteriorClave,
+			&item.EstadoAnteriorNombre,
+			&item.EstadoNuevoClave,
+			&item.EstadoNuevoNombre,
+		); err != nil {
+			return nil, fmt.Errorf("scan seguimiento global de punto: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterar seguimientos globales de punto: %w", err)
+	}
+
+	return items, nil
+}
+
 func (r *PuntoSeguimientoRepository) CreateComentarioByUnidadID(
 	ctx context.Context,
 	unidadID int64,

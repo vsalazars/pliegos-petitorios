@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -290,6 +291,151 @@ func (r *PliegoPuntoRepository) GetByID(ctx context.Context, id int64) (*domain.
 	}
 
 	return &item, nil
+}
+
+type ListPuntosFilters struct {
+	UnidadID           *int64
+	EstadoPuntoID      *int64
+	PrioridadID        *int64
+	CategoriaID        *int64
+	RequiereValidacion *bool
+	Query              string
+}
+
+func (r *PliegoPuntoRepository) ListAll(ctx context.Context, filters ListPuntosFilters) ([]domain.PliegoPuntoWithCatalogos, error) {
+	baseQuery := `
+		SELECT
+			pp.id,
+			pp.pliego_id,
+			pp.numero_punto,
+			pp.texto_original_ocr,
+			pp.texto_final,
+			pp.categoria_id,
+			pp.prioridad_id,
+			pp.estado_punto_id,
+			pp.responsable_usuario_id,
+			pp.fecha_registro,
+			pp.fecha_compromiso,
+			pp.fecha_envio_validacion,
+			pp.fecha_respuesta_unidad,
+			pp.fecha_validacion_des,
+			pp.fecha_cierre,
+			pp.origen_captura,
+			pp.requiere_validacion,
+			pp.observaciones,
+			pp.created_at,
+			pp.updated_at,
+			cp.clave AS categoria_clave,
+			cp.nombre AS categoria_nombre,
+			pr.clave AS prioridad_clave,
+			pr.nombre AS prioridad_nombre,
+			ep.clave AS estado_punto_clave,
+			ep.nombre AS estado_punto_nombre
+		FROM pliego_puntos pp
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		LEFT JOIN categorias_punto cp ON cp.id = pp.categoria_id
+		INNER JOIN prioridades pr ON pr.id = pp.prioridad_id
+		INNER JOIN estados_punto ep ON ep.id = pp.estado_punto_id
+	`
+
+	conditions := make([]string, 0)
+	args := make([]any, 0)
+	argPos := 1
+
+	if filters.UnidadID != nil && *filters.UnidadID > 0 {
+		conditions = append(conditions, "p.unidad_id = $"+strconv.Itoa(argPos))
+		args = append(args, *filters.UnidadID)
+		argPos++
+	}
+
+	if filters.EstadoPuntoID != nil && *filters.EstadoPuntoID > 0 {
+		conditions = append(conditions, "pp.estado_punto_id = $"+strconv.Itoa(argPos))
+		args = append(args, *filters.EstadoPuntoID)
+		argPos++
+	}
+
+	if filters.PrioridadID != nil && *filters.PrioridadID > 0 {
+		conditions = append(conditions, "pp.prioridad_id = $"+strconv.Itoa(argPos))
+		args = append(args, *filters.PrioridadID)
+		argPos++
+	}
+
+	if filters.CategoriaID != nil && *filters.CategoriaID > 0 {
+		conditions = append(conditions, "pp.categoria_id = $"+strconv.Itoa(argPos))
+		args = append(args, *filters.CategoriaID)
+		argPos++
+	}
+
+	if filters.RequiereValidacion != nil {
+		conditions = append(conditions, "pp.requiere_validacion = $"+strconv.Itoa(argPos))
+		args = append(args, *filters.RequiereValidacion)
+		argPos++
+	}
+
+	queryText := strings.TrimSpace(filters.Query)
+	if queryText != "" {
+		pattern := "%" + strings.ToLower(queryText) + "%"
+		conditions = append(conditions, "(LOWER(pp.texto_final) LIKE $"+strconv.Itoa(argPos)+" OR LOWER(COALESCE(pp.texto_original_ocr, '')) LIKE $"+strconv.Itoa(argPos)+" OR CAST(pp.numero_punto AS TEXT) LIKE $"+strconv.Itoa(argPos)+")")
+		args = append(args, pattern)
+		argPos++
+	}
+
+	query := baseQuery
+	if len(conditions) > 0 {
+		query += "\nWHERE " + strings.Join(conditions, " AND ")
+	}
+	query += "\nORDER BY pp.created_at DESC, pp.id DESC;"
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listar puntos globalmente: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]domain.PliegoPuntoWithCatalogos, 0)
+	for rows.Next() {
+		var item domain.PliegoPuntoWithCatalogos
+		if err := rows.Scan(
+			&item.ID,
+			&item.PliegoID,
+			&item.NumeroPunto,
+			&item.TextoOriginalOCR,
+			&item.TextoFinal,
+			&item.CategoriaID,
+			&item.PrioridadID,
+			&item.EstadoPuntoID,
+			&item.ResponsableUsuarioID,
+			&item.FechaRegistro,
+			&item.FechaCompromiso,
+			&item.FechaEnvioValidacion,
+			&item.FechaRespuestaUnidad,
+			&item.FechaValidacionDES,
+			&item.FechaCierre,
+			&item.OrigenCaptura,
+			&item.RequiereValidacion,
+			&item.Observaciones,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&item.CategoriaClave,
+			&item.CategoriaNombre,
+			&item.PrioridadClave,
+			&item.PrioridadNombre,
+			&item.EstadoPuntoClave,
+			&item.EstadoPuntoNombre,
+		); err != nil {
+			return nil, fmt.Errorf("scan punto global: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterar puntos globales: %w", err)
+	}
+
+	return items, nil
 }
 
 func (r *PliegoPuntoRepository) Create(
@@ -919,6 +1065,180 @@ func (r *PliegoPuntoRepository) EnviarAValidacionByUnidadID(
 		puntoID,
 		usuarioID,
 		comentarioFinal,
+		estadoAnteriorID,
+		estadoNuevoID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PliegoPuntoRepository) ResponderValidacionByUnidadID(
+	ctx context.Context,
+	unidadID int64,
+	puntoID int64,
+	usuarioID *int64,
+	comentario string,
+) error {
+	const estadoEnProcesoClave = "en_proceso"
+
+	estadoNuevoID, err := r.GetEstadoPuntoIDByClave(ctx, estadoEnProcesoClave)
+	if err != nil {
+		return err
+	}
+
+	var estadoAnteriorID int64
+	err = r.pool.QueryRow(ctx, `
+		SELECT pp.estado_punto_id
+		FROM pliego_puntos pp
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		WHERE pp.id = $1 AND p.unidad_id = $2
+	`, puntoID, unidadID).Scan(&estadoAnteriorID)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		UPDATE pliego_puntos pp
+		SET estado_punto_id = $1,
+		    fecha_respuesta_unidad = NOW(),
+		    requiere_validacion = false,
+		    updated_at = NOW()
+		FROM pliegos p
+		WHERE pp.id = $2
+		  AND p.id = pp.pliego_id
+		  AND p.unidad_id = $3
+	`
+
+	cmdTag, err := r.pool.Exec(ctx, query, estadoNuevoID, puntoID, unidadID)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("punto no encontrado")
+	}
+
+	_, err = r.pool.Exec(ctx, `
+		UPDATE punto_validaciones pv
+		SET es_vigente = FALSE
+		FROM pliego_puntos pp
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		WHERE pv.punto_id = pp.id
+		  AND pp.id = $1
+		  AND p.unidad_id = $2
+		  AND pv.es_vigente = TRUE
+	`, puntoID, unidadID)
+	if err != nil {
+		return err
+	}
+
+	comentarioFinal := strings.TrimSpace(comentario)
+	if comentarioFinal == "" {
+		comentarioFinal = "La unidad respondió a la validación"
+	}
+
+	_, err = r.pool.Exec(ctx, `
+		INSERT INTO punto_seguimientos (
+			punto_id,
+			usuario_id,
+			tipo_movimiento,
+			comentario,
+			estado_anterior_id,
+			estado_nuevo_id
+		) VALUES ($1, $2, 'observacion', $3, $4, $5)
+	`,
+		puntoID,
+		usuarioID,
+		comentarioFinal,
+		estadoAnteriorID,
+		estadoNuevoID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PliegoPuntoRepository) AplicarValidacionDES(
+	ctx context.Context,
+	puntoID int64,
+	resultado string,
+	comentario *string,
+) error {
+	resultado = strings.TrimSpace(strings.ToLower(resultado))
+
+	estadoClaveDestino := ""
+	tipoMovimiento := "validacion"
+	comentarioSeguimiento := "Validación registrada por DES"
+	requiereValidacion := false
+
+	switch resultado {
+	case "aprobado":
+		estadoClaveDestino = "validado"
+		comentarioSeguimiento = "Punto aprobado por DES"
+	case "rechazado":
+		estadoClaveDestino = "rechazado"
+		tipoMovimiento = "rechazo"
+		comentarioSeguimiento = "Punto rechazado por DES"
+	case "requiere_informacion":
+		estadoClaveDestino = "requiere_informacion"
+		tipoMovimiento = "validacion"
+		comentarioSeguimiento = "DES requiere información adicional"
+	default:
+		return fmt.Errorf("resultado de validación no válido")
+	}
+
+	if comentario != nil && strings.TrimSpace(*comentario) != "" {
+		comentarioSeguimiento = strings.TrimSpace(*comentario)
+	}
+
+	estadoNuevoID, err := r.GetEstadoPuntoIDByClave(ctx, estadoClaveDestino)
+	if err != nil {
+		return err
+	}
+
+	var estadoAnteriorID int64
+	err = r.pool.QueryRow(ctx, `
+		SELECT estado_punto_id
+		FROM pliego_puntos
+		WHERE id = $1
+	`, puntoID).Scan(&estadoAnteriorID)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		UPDATE pliego_puntos
+		SET estado_punto_id = $1,
+		    fecha_validacion_des = NOW(),
+		    requiere_validacion = $2,
+		    updated_at = NOW()
+		WHERE id = $3
+	`
+
+	cmdTag, err := r.pool.Exec(ctx, query, estadoNuevoID, requiereValidacion, puntoID)
+	if err != nil {
+		return err
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("punto no encontrado")
+	}
+
+	_, err = r.pool.Exec(ctx, `
+		INSERT INTO punto_seguimientos (
+			punto_id,
+			tipo_movimiento,
+			comentario,
+			estado_anterior_id,
+			estado_nuevo_id
+		) VALUES ($1, $2, $3, $4, $5)
+	`,
+		puntoID,
+		tipoMovimiento,
+		comentarioSeguimiento,
 		estadoAnteriorID,
 		estadoNuevoID,
 	)

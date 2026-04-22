@@ -21,6 +21,24 @@ func NewPuntoSeguimientoHandler(repo *repository.PuntoSeguimientoRepository) *Pu
 	return &PuntoSeguimientoHandler{repo: repo}
 }
 
+func (h *PuntoSeguimientoHandler) ListByPuntoIDAdmin(c *gin.Context) {
+	puntoID, ok := parsePuntoIDParam(c)
+	if !ok {
+		return
+	}
+
+	items, err := h.repo.ListByPuntoID(c.Request.Context(), puntoID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "error listando seguimientos del punto")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"items": items,
+		"total": len(items),
+	})
+}
+
 func (h *PuntoSeguimientoHandler) ListByPuntoID(c *gin.Context) {
 	unidadID, ok := currentUnidadIDFromClaims(c)
 	if !ok {

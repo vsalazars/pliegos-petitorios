@@ -1,67 +1,274 @@
-Resumen corto de archivos backend faltantes
-Si lo reduzco a inventario técnico, lo que más claramente falta crear es:
+Sí. Para DES conviene pensarlo en dos carriles al mismo tiempo:
 
-backend/internal/domain/archivo.go
+Operación de supervisión y validación.
+Analítica, numeralia y tablero ejecutivo.
+Si lo hacemos así, cada endpoint operativo que implementemos ya deja listo el dato para explotar estadísticamente después.
 
-backend/internal/domain/punto_evidencia.go
+Objetivo DES
+El módulo DES debería permitir:
 
-backend/internal/domain/punto_seguimiento.go
+ver todo el universo de pliegos y puntos de todas las unidades
+validar puntos, pedir información o rechazar
+consultar evidencias, seguimientos y respuestas de unidad
+medir avance, rezago, calidad de atención y comportamiento por unidad, por periodo y por tipo de punto
+Plan propuesto
+Lo haría en 6 bloques, en este orden:
 
-backend/internal/domain/punto_validacion.go
+Bloque DES-1: Catálogos y lectura global
+Alcance:
 
-backend/internal/domain/prioridad.go
+listar pliegos globales
+ver detalle de pliego con puntos
+listar puntos por filtros
+ver seguimientos, evidencias y validaciones de cualquier punto
+catálogos necesarios para DES
+Valor:
+deja a DES “ver todo” antes de empezar a mutar
+Endpoints sugeridos:
+GET /admin/pliegos
+GET /admin/pliegos/:id
+GET /admin/pliegos/:id/puntos
+GET /admin/puntos
+GET /admin/puntos/:punto_id/seguimientos
+GET /admin/puntos/:punto_id/evidencias
+GET /admin/puntos/:punto_id/validaciones
+Bloque DES-2: Validación operativa
+Alcance:
 
-backend/internal/domain/categoria_punto.go
+aprobar punto
+rechazar punto con motivo
+marcar requiere_informacion
+dejar comentario de validación
+actualizar fecha_validacion_des
+cambiar estado del punto según resultado
+generar seguimiento automático
+Valor:
+completa el ciclo con unidad
+Endpoints sugeridos:
+POST /admin/puntos/:punto_id/validaciones
+payload con resultado, motivo_rechazo_id, comentario
+Reglas mínimas:
+rechazado obliga motivo_rechazo_id
+solo una validación vigente
+cada nueva validación invalida la anterior
+registrar transición de estado en punto_seguimientos
+Bloque DES-3: Gestión de estados y cierre
+Alcance:
 
-backend/internal/domain/estado_punto.go
+cambiar estado manual supervisado
+cerrar punto
+marcar pliego parcialmente atendido / atendido / cerrado
+recalcular estado agregado del pliego según sus puntos
+Valor:
+permite control real del expediente
+Endpoints sugeridos:
+PUT /admin/puntos/:punto_id/estado
+PUT /admin/pliegos/:id/estado
+POST /admin/pliegos/:id/recalcular-estado
+Reglas de valor:
+el estado del pliego puede derivarse del % de puntos cerrados / resueltos / rechazados
+evitar cierres inconsistentes
+Bloque DES-4: Dashboard y numeralia base
+Alcance:
 
-backend/internal/domain/estado_pliego.go
+endpoints agregados para tablero
+cortes por unidad, estado, prioridad, categoría, periodo, año
+Valor:
+visibilidad ejecutiva inmediata
+Endpoints sugeridos:
+GET /admin/dashboard/resumen
+GET /admin/dashboard/unidades
+GET /admin/dashboard/pliegos
+GET /admin/dashboard/puntos
+GET /admin/dashboard/validaciones
+Bloque DES-5: Analítica avanzada
+Alcance:
 
-backend/internal/domain/tipo_evidencia.go
+tendencias semanales/mensuales
+tiempos de atención
+SLA por prioridad
+top de unidades con más rezago
+calidad de respuesta
+productividad de validación
+Valor:
+vuelve al sistema útil para decisiones, no solo para captura
+Endpoints sugeridos:
+GET /admin/analytics/tendencias
+GET /admin/analytics/sla
+GET /admin/analytics/unidades
+GET /admin/analytics/validadores
+Bloque DES-6: Exportables y reporte ejecutivo
+Alcance:
 
-backend/internal/domain/motivo_rechazo.go
+exportar CSV/Excel/JSON
+reporte de seguimiento por unidad
+reporte consolidado por periodo
+Valor:
+facilita entrega institucional y reuniones de seguimiento
+Endpoints sugeridos:
+GET /admin/reportes/unidades.csv
+GET /admin/reportes/pliegos.csv
+GET /admin/reportes/puntos.csv
+Numeralia que sí vale la pena medir
+Estas son las métricas con más valor práctico para DES.
 
-backend/internal/domain/password_reset_token.go
+Resumen general
 
-backend/internal/domain/user_session.go
+total de pliegos
+total de puntos
+total de unidades con pliego
+pliegos abiertos
+pliegos cerrados
+puntos pendientes
+puntos en proceso
+puntos enviados a validación
+puntos rechazados
+puntos resueltos
+puntos cerrados
+Por unidad académica
 
-backend/internal/repository/archivo_repository.go
+total de pliegos por unidad
+total de puntos por unidad
+puntos resueltos por unidad
+puntos rechazados por unidad
+puntos con evidencia por unidad
+puntos sin evidencia por unidad
+puntos enviados a validación por unidad
+tiempo promedio de respuesta por unidad
+tasa de aprobación por unidad
+tasa de rechazo por unidad
+% de avance por unidad
+Por prioridad
 
-backend/internal/repository/punto_evidencia_repository.go
+puntos baja/media/alta/urgente
+tiempo promedio por prioridad
+backlog por prioridad
+% de cumplimiento de SLA por prioridad
+Por categoría
 
-backend/internal/repository/punto_seguimiento_repository.go
+distribución de puntos por categoría
+categorías con más rezago
+categorías con más rechazos
+categorías con mayor tiempo de atención
+Por validación
 
-backend/internal/repository/punto_validacion_repository.go
+total de validaciones emitidas
+aprobadas
+rechazadas
+requiere información
+motivos de rechazo más frecuentes
+promedio de reenvíos por punto
+puntos con más de una validación
+puntos con validación vigente sin atender
+Por tiempos
 
-backend/internal/repository/prioridad_repository.go
+días desde recepción del pliego
+días desde registro del punto
+días a primer envío a validación
+días a primera respuesta de unidad
+días a validación DES
+días a cierre
+lead time extremo a extremo por punto
+lead time extremo a extremo por pliego
+Por evidencia
 
-backend/internal/repository/categoria_punto_repository.go
+puntos con evidencia vs sin evidencia
+evidencias por tipo
+promedio de evidencias por punto
+puntos rechazados sin evidencia suficiente
+puntos con evidencia posterior a rechazo
+Por seguimiento
 
-backend/internal/repository/estado_punto_repository.go
+total de movimientos
+comentarios por punto
+cambios de estado por punto
+puntos “silenciosos” sin movimiento reciente
+puntos con demasiados rebotes entre estados
+Indicadores ejecutivos
+Si quieres verdadero valor para DES, estos KPIs deberían estar arriba del dashboard:
 
-backend/internal/repository/estado_pliego_repository.go
+% avance global = puntos resueltos o cerrados / total puntos
+% puntos validados = puntos con validación aprobada / total puntos
+% rezago = puntos abiertos fuera de SLA / total abiertos
+promedio días de atención por punto
+top 5 unidades con mayor rezago
+top 5 categorías con más incidencia
+motivo de rechazo más frecuente
+puntos críticos urgentes abiertos
+Semáforos recomendados
+Para que el dashboard “hable solo”:
 
-backend/internal/repository/tipo_evidencia_repository.go
+Verde: dentro de SLA y con avance
+Amarillo: cerca de vencer o requiere información
+Rojo: vencido, rechazado reiteradamente o sin movimiento
+Gris: detectado/recién recibido
+Modelo técnico para DES
+A nivel backend, yo organizaría DES así:
 
-backend/internal/repository/motivo_rechazo_repository.go
+handlers/admin_dashboard_handler.go
 
-backend/internal/repository/password_reset_repository.go
+handlers/admin_punto_handler.go
 
-backend/internal/repository/user_session_repository.go
+handlers/admin_validacion_handler.go
 
-backend/internal/http/handlers/punto_evidencia_handler.go
+handlers/admin_reporte_handler.go
 
-backend/internal/http/handlers/punto_seguimiento_handler.go
+repository/admin_dashboard_repository.go
 
-backend/internal/http/handlers/punto_validacion_handler.go
+repository/punto_validacion_repository.go ya lo tienes iniciado para lectura
 
-backend/internal/http/handlers/catalogo_handler.go
+repository/admin_punto_repository.go si conviene separar lectura compleja y agregados
 
-backend/internal/services/storage_service.go
+services/dashboard_service.go
 
-backend/internal/services/password_reset_service.go
+services/validacion_service.go
 
-backend/internal/services/session_service.go
+services/pliego_estado_service.go
 
-opcional backend/internal/services/punto_validacion_service.go
+Y usaría SQL agregada para dashboard, no loops en Go, para que escale mejor.
+
+Orden recomendado de implementación
+Para no perdernos, yo haría DES así:
+
+Lectura global de puntos con filtros.
+Crear validación DES.
+Reflejar cambios de estado y seguimiento.
+Dashboard resumen.
+Dashboard por unidad.
+SLA y tiempos.
+Exportables.
+Primera versión del dashboard
+Con una V1 ya útil:
+
+tarjetas:
+pliegos totales
+puntos totales
+abiertos
+en validación
+rechazados
+resueltos
+tabla por unidad:
+unidad
+pliegos
+puntos
+avance %
+rechazados
+vencidos
+gráfica por estado de punto
+gráfica por prioridad
+top motivos de rechazo
+Qué falta para poder probar DES completo
+Para un flujo de punta a punta, DES necesita mínimo:
+
+emitir validación
+pedir información
+rechazar con motivo
+aprobar
+consultar historial
+tablero resumen
+Si quieres, el siguiente paso lo hacemos igual que con unidad: te propongo el Bloque DES-1 exacto con archivos, endpoints y orden de prueba, y arrancamos implementando el primero.
+
+NOS QUEDAMOS EN BLOQUE 2
+
+
 

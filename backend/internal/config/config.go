@@ -16,8 +16,8 @@ type Config struct {
 	JWTSecret       string
 	JTTExpiresHours string
 
-	// 👇 NUEVO
 	PythonParserURL string
+	UploadDir       string
 }
 
 func getEnv(key, fallback string) string {
@@ -42,8 +42,7 @@ func Load() Config {
 		AuthLockMinutes: getEnv("AUTH_LOCK_MINUTES", "15"),
 		JWTSecret:       getEnv("JWT_SECRET", "cambia-esto-en-desarrollo"),
 		JTTExpiresHours: getEnv("JWT_EXPIRES_HOURS", "12"),
-
-		// 👇 NUEVO
 		PythonParserURL: getEnv("PYTHON_PARSER_URL", "http://localhost:5000"),
+		UploadDir:       getEnv("UPLOAD_DIR", "/tmp/pliegos-des/uploads"),
 	}
 }

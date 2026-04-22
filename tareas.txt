@@ -1,0 +1,156 @@
+l siguiente paso con más valor para DES es agregar un bloque de atención inmediata dentro del dashboard, para que no solo vea volumen sino focos operativos. Mi propuesta para el siguiente ajuste es sumar:
+
+pendientes_validacion: puntos con requiere_validacion=true
+con_observacion_des: puntos en requiere_informacion
+rechazos_recientes
+validaciones_recientes
+top_unidades_con_mas_puntos_pendientes
+Si te parece, implemento primero validaciones_recientes y rechazos_recientes dentro del mismo GET /admin/dashboard, y lo probamos con un solo curl.
+
+
+
+
+
+9:47 PM
+ES POR UNIDA ACADEDMIECA Y ELK GRANTOTAL DE TODAS??? tambbien los contar dias aquiu es importanmte cuantos dias deasdse que se recibio u o registro un punto del pliego etc etc que me sugieres?
+9:47 PM
+
+
+Sí: como lo dejé ahorita, el dashboard ya te da ambas cosas, pero de forma básica:
+
+resumen es el gran total global de todo el sistema DES.
+por_unidad es el desglose por unidad académica.
+O sea, en este momento ya tienes “total general” y “por unidad”, pero todavía no tienes la capa más valiosa: antigüedad, tiempos y semáforos. Ahí es donde de verdad gana valor operativo.
+
+Lo que te sugiero para DES es organizar la numeralia en 4 bloques.
+
+1. Volumen
+Esto ya lo empezamos bien.
+
+total de unidades
+total de pliegos
+total de puntos
+puntos por unidad
+puntos por estado
+puntos por prioridad
+pliegos por estado
+2. Pendientes operativos
+Esto le sirve mucho a supervisión.
+
+puntos pendientes de validación DES
+puntos con observación DES (requiere_informacion)
+puntos rechazados
+puntos en proceso
+puntos sin evidencia
+puntos sin responsable
+pliegos sin revisión OCR final
+unidades con más puntos pendientes
+3. Antigüedad y tiempos
+Aquí está el mayor valor real, y sí, conviene medir días.
+Yo te sugiero manejar varios “días transcurridos”, no solo uno:
+
+dias_desde_recepcion_pliego
+Desde pliegos.fecha_recepcion
+Sirve para presión institucional y seguimiento histórico.
+
+dias_desde_registro_pliego
+Desde pliegos.fecha_registro
+Sirve para medir carga dentro del sistema.
+
+dias_desde_registro_punto
+Desde pliego_puntos.fecha_registro
+Muy útil para saber cuánto tiempo lleva vivo cada punto.
+
+dias_desde_envio_validacion
+Desde pliego_puntos.fecha_envio_validacion
+Muy importante para DES: cuánto tiempo lleva una validación sin atender.
+
+dias_desde_ultima_respuesta_unidad
+Desde pliego_puntos.fecha_respuesta_unidad
+Muy útil para saber si la unidad ya contestó y DES no ha reaccionado.
+
+dias_desde_validacion_des
+Desde pliego_puntos.fecha_validacion_des
+Ayuda a medir actividad reciente de DES.
+
+Con eso puedes construir semáforos muy claros:
+
+0-7 días: normal
+8-15 días: atención
+16-30 días: riesgo
+>30 días: crítico
+4. Indicadores ejecutivos
+Estos son los que yo pondría arriba del dashboard.
+
+porcentaje de puntos validados
+porcentaje de puntos rechazados
+porcentaje de puntos aún detectados
+tiempo promedio de atención por punto
+tiempo promedio hasta envío a validación
+tiempo promedio de respuesta de unidad
+tiempo promedio de resolución completa
+unidad con mayor rezago
+unidad con mayor porcentaje de avance
+puntos críticos por prioridad alta/urgente con más antigüedad
+Mi recomendación práctica es no meter todo de golpe. Para avanzar firme, yo haría este orden:
+
+Enriquecer por_unidad con antigüedad y pendientes.
+Agregar por unidad:
+
+puntos_en_proceso
+puntos_detectados
+dias_promedio_desde_registro_punto
+max_dias_desde_registro_punto
+puntos_vencidos_sla
+Agregar un bloque alertas.
+Ejemplo:
+
+puntos con más de 15 días sin movimiento
+puntos con validación pendiente de más de 7 días
+puntos sin evidencia
+puntos urgentes sin atender
+Agregar un bloque recientes.
+
+últimas validaciones DES
+últimos rechazos
+últimas respuestas de unidad
+últimos pliegos recibidos
+Después sí meter KPIs de promedio y porcentaje.
+
+Si quieres una versión muy útil desde ya, el siguiente cambio que yo implementaría es este dentro de GET /admin/dashboard:
+
+resumen global
+por_unidad enriquecido con:
+puntos_detectados
+puntos_en_proceso
+dias_promedio_desde_registro_punto
+max_dias_desde_registro_punto
+alertas con:
+puntos_mas_antiguos
+validaciones_pendientes_antiguas
+Ese sería el salto de “conteo simple” a “tablero de gestión”.
+
+Si te parece, implemento primero la parte de antigüedad en días dentro de por_unidad y en un bloque alertas, y la probamos con un solo curl.
+
+
+
+
+
+9:47 PM
+
+
+
+
+Default permissions
+
+GPT-5.4
+
+Medium
+
+
+Work locally
+
+
+
+
+Work locally
