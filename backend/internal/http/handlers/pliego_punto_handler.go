@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"pliegos-des/backend/internal/domain"
 	"pliegos-des/backend/internal/repository"
 	"pliegos-des/backend/pkg/response"
 
@@ -38,13 +39,27 @@ func NewPliegoPuntoHandler(pliegoPuntoRepo *repository.PliegoPuntoRepository) *P
 }
 
 func (h *PliegoPuntoHandler) ListByPliegoID(c *gin.Context) {
-	
+
 	pliegoID, ok := parsePliegoIDParamFromPunto(c)
 	if !ok {
 		return
 	}
 
-	items, err := h.pliegoPuntoRepo.ListByPliegoID(c.Request.Context(), pliegoID)
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
+	var (
+		items []domain.PliegoPuntoWithCatalogos
+		err   error
+	)
+
+	if scoped {
+		items, err = h.pliegoPuntoRepo.ListByPliegoIDAndUnidadID(c.Request.Context(), pliegoID, *unidadID)
+	} else {
+		items, err = h.pliegoPuntoRepo.ListByPliegoID(c.Request.Context(), pliegoID)
+	}
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "error listando puntos del pliego")
 		return
@@ -58,7 +73,7 @@ func (h *PliegoPuntoHandler) ListByPliegoID(c *gin.Context) {
 
 func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 	pliegoID, ok := parsePliegoIDParamFromPunto(c)
-	
+
 	if !ok {
 		return
 	}
@@ -82,6 +97,11 @@ func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 		return
 	}
 
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
 	var fechaCompromiso *time.Time
 	if req.FechaCompromiso != nil && strings.TrimSpace(*req.FechaCompromiso) != "" {
 		parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*req.FechaCompromiso))
@@ -92,21 +112,44 @@ func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 		fechaCompromiso = &parsed
 	}
 
-	item, err := h.pliegoPuntoRepo.Create(
-		c.Request.Context(),
-		pliegoID,
-		req.NumeroPunto,
-		req.TextoOriginalOCR,
-		req.TextoFinal,
-		req.CategoriaID,
-		req.PrioridadID,
-		req.EstadoPuntoID,
-		req.ResponsableUsuarioID,
-		fechaCompromiso,
-		req.OrigenCaptura,
-		req.RequiereValidacion,
-		req.Observaciones,
+	var (
+		item *domain.PliegoPuntoWithCatalogos
+		err  error
 	)
+	if scoped {
+		item, err = h.pliegoPuntoRepo.CreateByUnidadID(
+			c.Request.Context(),
+			*unidadID,
+			pliegoID,
+			req.NumeroPunto,
+			req.TextoOriginalOCR,
+			req.TextoFinal,
+			req.CategoriaID,
+			req.PrioridadID,
+			req.EstadoPuntoID,
+			req.ResponsableUsuarioID,
+			fechaCompromiso,
+			req.OrigenCaptura,
+			req.RequiereValidacion,
+			req.Observaciones,
+		)
+	} else {
+		item, err = h.pliegoPuntoRepo.Create(
+			c.Request.Context(),
+			pliegoID,
+			req.NumeroPunto,
+			req.TextoOriginalOCR,
+			req.TextoFinal,
+			req.CategoriaID,
+			req.PrioridadID,
+			req.EstadoPuntoID,
+			req.ResponsableUsuarioID,
+			fechaCompromiso,
+			req.OrigenCaptura,
+			req.RequiereValidacion,
+			req.Observaciones,
+		)
+	}
 	if err != nil {
 		if errors.Is(err, repository.ErrPliegoPuntoNumeroDuplicado) {
 			response.Error(c, http.StatusConflict, "el número de punto ya existe en el pliego")
@@ -121,7 +164,6 @@ func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 		"item": item,
 	})
 }
-
 
 func (h *PliegoPuntoHandler) UpdateTextoFinal(c *gin.Context) {
 	idParam := c.Param("punto_id")
@@ -147,11 +189,25 @@ func (h *PliegoPuntoHandler) UpdateTextoFinal(c *gin.Context) {
 		return
 	}
 
-	err = h.pliegoPuntoRepo.UpdateTextoFinal(
-		c.Request.Context(),
-		id,
-		body.TextoFinal,
-	)
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
+	if scoped {
+		err = h.pliegoPuntoRepo.UpdateTextoFinalByUnidadID(
+			c.Request.Context(),
+			*unidadID,
+			id,
+			body.TextoFinal,
+		)
+	} else {
+		err = h.pliegoPuntoRepo.UpdateTextoFinal(
+			c.Request.Context(),
+			id,
+			body.TextoFinal,
+		)
+	}
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "error actualizando punto")
 		return
@@ -177,7 +233,6 @@ func parsePliegoIDParamFromPunto(c *gin.Context) (int64, bool) {
 
 	return id, true
 }
-
 
 func (h *PliegoPuntoHandler) UpdateCompleto(c *gin.Context) {
 	idParam := c.Param("punto_id")
@@ -210,6 +265,11 @@ func (h *PliegoPuntoHandler) UpdateCompleto(c *gin.Context) {
 		return
 	}
 
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
 	var fechaCompromiso *time.Time
 	if req.FechaCompromiso != nil && strings.TrimSpace(*req.FechaCompromiso) != "" {
 		parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*req.FechaCompromiso))
@@ -220,17 +280,32 @@ func (h *PliegoPuntoHandler) UpdateCompleto(c *gin.Context) {
 		fechaCompromiso = &parsed
 	}
 
-	err = h.pliegoPuntoRepo.UpdateCompleto(
-		c.Request.Context(),
-		id,
-		req.TextoFinal,
-		req.PrioridadID,
-		req.EstadoPuntoID,
-		req.CategoriaID,
-		req.ResponsableUsuarioID,
-		fechaCompromiso,
-		req.Observaciones,
-	)
+	if scoped {
+		err = h.pliegoPuntoRepo.UpdateCompletoByUnidadID(
+			c.Request.Context(),
+			*unidadID,
+			id,
+			req.TextoFinal,
+			req.PrioridadID,
+			req.EstadoPuntoID,
+			req.CategoriaID,
+			req.ResponsableUsuarioID,
+			fechaCompromiso,
+			req.Observaciones,
+		)
+	} else {
+		err = h.pliegoPuntoRepo.UpdateCompleto(
+			c.Request.Context(),
+			id,
+			req.TextoFinal,
+			req.PrioridadID,
+			req.EstadoPuntoID,
+			req.CategoriaID,
+			req.ResponsableUsuarioID,
+			fechaCompromiso,
+			req.Observaciones,
+		)
+	}
 
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "error actualizando punto")

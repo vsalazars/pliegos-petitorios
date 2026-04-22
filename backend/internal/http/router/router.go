@@ -26,6 +26,12 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	rolRepo := repository.NewRolRepository(pool)
 	pliegoRepo := repository.NewPliegoRepository(pool)
 	pliegoPuntoRepo := repository.NewPliegoPuntoRepository(pool)
+	puntoSeguimientoRepo := repository.NewPuntoSeguimientoRepository(pool)
+	puntoValidacionRepo := repository.NewPuntoValidacionRepository(pool)
+	prioridadRepo := repository.NewPrioridadRepository(pool)
+	estadoPuntoRepo := repository.NewEstadoPuntoRepository(pool)
+	categoriaPuntoRepo := repository.NewCategoriaPuntoRepository(pool)
+	estadoPliegoRepo := repository.NewEstadoPliegoRepository(pool)
 
 	authService := services.NewAuthService(cfg, userRepo)
 	jwtService := services.NewJWTService(cfg)
@@ -34,11 +40,19 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	unidadHandler := handlers.NewUnidadHandler(unidadRepo)
 	userHandler := handlers.NewUserHandler(userRepo, authService)
 	rolHandler := handlers.NewRolHandler(rolRepo)
+	catalogoHandler := handlers.NewCatalogoHandler(
+		prioridadRepo,
+		estadoPuntoRepo,
+		categoriaPuntoRepo,
+		estadoPliegoRepo,
+	)
 
 	pythonParserService := services.NewPythonParserService(cfg.PythonParserURL)
 
 	pliegoHandler := handlers.NewPliegoHandler(pliegoRepo, pliegoPuntoRepo, pythonParserService)
 	pliegoPuntoHandler := handlers.NewPliegoPuntoHandler(pliegoPuntoRepo)
+	puntoSeguimientoHandler := handlers.NewPuntoSeguimientoHandler(puntoSeguimientoRepo)
+	puntoValidacionHandler := handlers.NewPuntoValidacionHandler(puntoValidacionRepo, pliegoPuntoRepo)
 
 	r.GET("/utils/salud", healthHandler.GetHealth)
 
@@ -97,10 +111,21 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.PUT("/pliegos/:id/revision-ocr", pliegoHandler.UpdateRevisionOCR)
 		unidad.PUT("/pliegos/:id/puntos/:punto_id/completo", pliegoPuntoHandler.UpdateCompleto)
 
+		// CATALOGOS
+		unidad.GET("/catalogos/prioridades", catalogoHandler.ListPrioridades)
+		unidad.GET("/catalogos/estados-punto", catalogoHandler.ListEstadosPunto)
+		unidad.GET("/catalogos/categorias-punto", catalogoHandler.ListCategoriasPunto)
+		unidad.GET("/catalogos/estados-pliego", catalogoHandler.ListEstadosPliego)
+
 		// PUNTOS DEL PLIEGO
 		unidad.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
 		unidad.POST("/pliegos/:id/puntos", pliegoPuntoHandler.Create)
 		unidad.PUT("/pliegos/:id/puntos/:punto_id", pliegoPuntoHandler.UpdateTextoFinal)
+		unidad.GET("/pliegos/:id/puntos/:punto_id/seguimientos", puntoSeguimientoHandler.ListByPuntoID)
+		unidad.POST("/pliegos/:id/puntos/:punto_id/seguimientos", puntoSeguimientoHandler.CreateComentario)
+		unidad.GET("/pliegos/:id/puntos/:punto_id/validaciones", puntoValidacionHandler.ListByPuntoID)
+		unidad.GET("/pliegos/:id/puntos/:punto_id/validaciones/vigente", puntoValidacionHandler.GetVigenteByPuntoID)
+		unidad.POST("/pliegos/:id/puntos/:punto_id/enviar-validacion", puntoValidacionHandler.EnviarAValidacion)
 	}
 
 	return r

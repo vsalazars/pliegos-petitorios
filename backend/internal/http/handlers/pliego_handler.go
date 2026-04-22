@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"pliegos-des/backend/internal/domain"
+	"pliegos-des/backend/internal/http/middleware"
 	"pliegos-des/backend/internal/repository"
 	"pliegos-des/backend/internal/services"
 	"pliegos-des/backend/pkg/response"
@@ -62,8 +64,8 @@ type UpdateRevisionOCRPuntoRequest struct {
 }
 
 type UpdateRevisionOCRRequest struct {
-	TextoRevisionFinal string                         `json:"texto_revision_final" binding:"required"`
-	EstadoClaveDestino string                         `json:"estado_clave_destino" binding:"required"`
+	TextoRevisionFinal string                          `json:"texto_revision_final" binding:"required"`
+	EstadoClaveDestino string                          `json:"estado_clave_destino" binding:"required"`
 	Puntos             []UpdateRevisionOCRPuntoRequest `json:"puntos"`
 }
 
@@ -80,7 +82,21 @@ func NewPliegoHandler(
 }
 
 func (h *PliegoHandler) List(c *gin.Context) {
-	items, err := h.pliegoRepo.List(c.Request.Context())
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
+	var (
+		items []domain.PliegoWithEstado
+		err   error
+	)
+
+	if scoped {
+		items, err = h.pliegoRepo.ListByUnidadID(c.Request.Context(), *unidadID)
+	} else {
+		items, err = h.pliegoRepo.List(c.Request.Context())
+	}
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "error listando pliegos")
 		return
@@ -98,7 +114,19 @@ func (h *PliegoHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	item, err := h.pliegoRepo.GetByID(c.Request.Context(), id)
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
+	var item *domain.PliegoWithEstado
+	var err error
+
+	if scoped {
+		item, err = h.pliegoRepo.GetByIDAndUnidadID(c.Request.Context(), id, *unidadID)
+	} else {
+		item, err = h.pliegoRepo.GetByID(c.Request.Context(), id)
+	}
 	if err != nil {
 		if errors.Is(err, repository.ErrPliegoNotFound) {
 			response.Error(c, http.StatusNotFound, "pliego no encontrado")
@@ -109,6 +137,20 @@ func (h *PliegoHandler) GetByID(c *gin.Context) {
 	}
 
 	// 🔥 NUEVO: traer puntos
+	if scoped {
+		puntos, err := h.pliegoPuntoRepo.ListByPliegoIDAndUnidadID(c.Request.Context(), id, *unidadID)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, "error obteniendo puntos del pliego")
+			return
+		}
+
+		response.OK(c, gin.H{
+			"item":   item,
+			"puntos": puntos,
+		})
+		return
+	}
+
 	puntos, err := h.pliegoPuntoRepo.ListByPliegoID(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "error obteniendo puntos del pliego")
@@ -134,6 +176,14 @@ func (h *PliegoHandler) Create(c *gin.Context) {
 	if req.UnidadID <= 0 || req.EstadoPliegoID <= 0 || req.Folio == "" || req.Titulo == "" || strings.TrimSpace(req.FechaRecepcion) == "" {
 		response.Error(c, http.StatusBadRequest, "unidad_id, folio, titulo, fecha_recepcion y estado_pliego_id son obligatorios")
 		return
+	}
+
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+	if scoped {
+		req.UnidadID = *unidadID
 	}
 
 	fechaRecepcion, err := time.Parse("2006-01-02", strings.TrimSpace(req.FechaRecepcion))
@@ -204,6 +254,14 @@ func (h *PliegoHandler) CreateDesdePDF(c *gin.Context) {
 	if req.UnidadID <= 0 || req.Folio == "" || req.Titulo == "" || strings.TrimSpace(req.FechaRecepcion) == "" || req.ArchivoPath == "" {
 		response.Error(c, http.StatusBadRequest, "unidad_id, folio, titulo, fecha_recepcion y archivo_path son obligatorios")
 		return
+	}
+
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+	if scoped {
+		req.UnidadID = *unidadID
 	}
 
 	if h.pythonParserService == nil {
@@ -312,7 +370,12 @@ func (h *PliegoHandler) CreateDesdePDF(c *gin.Context) {
 		}
 
 		if len(puntos) > 0 {
-			if err := h.pliegoPuntoRepo.CreateFromOCR(c.Request.Context(), item.ID, puntos); err != nil {
+			if scoped {
+				err = h.pliegoPuntoRepo.CreateFromOCRByUnidadID(c.Request.Context(), *unidadID, item.ID, puntos)
+			} else {
+				err = h.pliegoPuntoRepo.CreateFromOCR(c.Request.Context(), item.ID, puntos)
+			}
+			if err != nil {
 				response.Error(c, http.StatusInternalServerError, "error guardando puntos OCR del pliego")
 				return
 			}
@@ -385,12 +448,28 @@ func (h *PliegoHandler) UpdateRevisionOCR(c *gin.Context) {
 
 	textoRevisionFinal := req.TextoRevisionFinal
 
-	item, err := h.pliegoRepo.UpdateRevisionOCR(
-		c.Request.Context(),
-		id,
-		&textoRevisionFinal,
-		estadoDestinoID,
-	)
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+
+	var item *domain.PliegoWithEstado
+	if scoped {
+		item, err = h.pliegoRepo.UpdateRevisionOCRByUnidadID(
+			c.Request.Context(),
+			id,
+			*unidadID,
+			&textoRevisionFinal,
+			estadoDestinoID,
+		)
+	} else {
+		item, err = h.pliegoRepo.UpdateRevisionOCR(
+			c.Request.Context(),
+			id,
+			&textoRevisionFinal,
+			estadoDestinoID,
+		)
+	}
 	if err != nil {
 		if errors.Is(err, repository.ErrPliegoNotFound) {
 			response.Error(c, http.StatusNotFound, "pliego no encontrado")
@@ -419,7 +498,12 @@ func (h *PliegoHandler) UpdateRevisionOCR(c *gin.Context) {
 			})
 		}
 
-		if err := h.pliegoPuntoRepo.CreateFromOCR(c.Request.Context(), id, puntos); err != nil {
+		if scoped {
+			err = h.pliegoPuntoRepo.CreateFromOCRByUnidadID(c.Request.Context(), *unidadID, id, puntos)
+		} else {
+			err = h.pliegoPuntoRepo.CreateFromOCR(c.Request.Context(), id, puntos)
+		}
+		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "error guardando puntos del pliego")
 			return
 		}
@@ -428,4 +512,21 @@ func (h *PliegoHandler) UpdateRevisionOCR(c *gin.Context) {
 	response.OK(c, gin.H{
 		"item": item,
 	})
+}
+
+func getScopedUnidadID(c *gin.Context) (*int64, bool, bool) {
+	if !strings.HasPrefix(c.FullPath(), "/unidad/") {
+		return nil, false, true
+	}
+
+	claims, ok := middleware.GetCurrentUserClaims(c)
+	if !ok {
+		return nil, false, false
+	}
+	if claims.UnidadID == nil || *claims.UnidadID <= 0 {
+		response.Error(c, http.StatusForbidden, "usuario sin unidad asignada")
+		return nil, false, false
+	}
+
+	return claims.UnidadID, true, true
 }
