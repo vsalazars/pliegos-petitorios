@@ -1,0 +1,27 @@
+# Go
+/bin/
+/tmp/
+*.exe
+*.out
+
+# Node / Next (por si luego agregas front)
+/node_modules
+/.next
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Logs
+*.log
+
+# Archivos sensibles
+.env*
+*.key
+
+# PDFs de prueba
+*.pdf
+
+# OS
+.DS_Store

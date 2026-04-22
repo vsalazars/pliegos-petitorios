@@ -1,0 +1,106 @@
+package services
+
+import (
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+type PuntoDetectado struct {
+	NumeroPunto      int    `json:"numero_punto"`
+	TextoOriginalOCR string `json:"texto_original_ocr"`
+	TextoFinal       string `json:"texto_final"`
+	OrigenCaptura    string `json:"origen_captura"`
+}
+
+type PliegoParserService struct{}
+
+func NewPliegoParserService() *PliegoParserService {
+	return &PliegoParserService{}
+}
+
+func (s *PliegoParserService) DetectarPuntosDesdeOCR(texto string) []PuntoDetectado {
+	texto = normalizarSaltos(texto)
+	texto = strings.TrimSpace(texto)
+	if texto == "" {
+		return []PuntoDetectado{}
+	}
+
+	// Detecta inicios de punto como:
+	// 1.
+	// 2)
+	// 3 -
+	// al inicio del texto o después de salto de línea.
+	re := regexp.MustCompile(`(?m)(^|\n)\s*(\d{1,4})\s*[\.\)\-]\s+`)
+	matches := re.FindAllStringSubmatchIndex(texto, -1)
+
+	if len(matches) == 0 {
+		return []PuntoDetectado{}
+	}
+
+	items := make([]PuntoDetectado, 0, len(matches))
+
+	for i, m := range matches {
+		// Grupo 2 = número detectado
+		numStart := m[4]
+		numEnd := m[5]
+
+		numeroStr := texto[numStart:numEnd]
+		numero, err := strconv.Atoi(numeroStr)
+		if err != nil || numero <= 0 {
+			continue
+		}
+
+		// Inicio real del bloque completo del punto
+		blockStart := m[2]
+
+		// Fin: antes del siguiente punto o fin del texto
+		blockEnd := len(texto)
+		if i+1 < len(matches) {
+			blockEnd = matches[i+1][2]
+		}
+
+		bloque := strings.TrimSpace(texto[blockStart:blockEnd])
+		if bloque == "" {
+			continue
+		}
+
+		textoFinal := limpiarPrefijoNumeracion(bloque)
+		if textoFinal == "" {
+			continue
+		}
+
+		items = append(items, PuntoDetectado{
+			NumeroPunto:      numero,
+			TextoOriginalOCR: bloque,
+			TextoFinal:       textoFinal,
+			OrigenCaptura:    "ocr",
+		})
+	}
+
+	return items
+}
+
+func normalizarSaltos(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	return s
+}
+
+func limpiarPrefijoNumeracion(s string) string {
+	s = strings.TrimSpace(s)
+
+	re := regexp.MustCompile(`^\s*\d{1,4}\s*[\.\)\-]\s*`)
+	s = re.ReplaceAllString(s, "")
+	s = strings.TrimSpace(s)
+
+	// Compacta múltiples espacios, pero conserva saltos de línea útiles
+	lineas := strings.Split(s, "\n")
+	for i := range lineas {
+		lineas[i] = strings.Join(strings.Fields(lineas[i]), " ")
+	}
+	s = strings.Join(lineas, "\n")
+	s = strings.TrimSpace(s)
+
+	return s
+}
