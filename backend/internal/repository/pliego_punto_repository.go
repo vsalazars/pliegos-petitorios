@@ -354,3 +354,119 @@ func (r *PliegoPuntoRepository) CreateFromOCR(
 
 	return tx.Commit(ctx)
 }
+
+func (r *PliegoPuntoRepository) UpdateTextoFinal(
+	ctx context.Context,
+	id int64,
+	textoFinal string,
+) error {
+	query := `
+	UPDATE pliego_puntos
+	SET texto_final = $1,
+	    requiere_validacion = false,
+	    updated_at = NOW()
+	WHERE id = $2
+	`
+
+	cmdTag, err := r.pool.Exec(ctx, query, textoFinal, id)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("punto no encontrado")
+	}
+
+	return nil
+}
+
+func (r *PliegoPuntoRepository) UpdateCompleto(
+	ctx context.Context,
+	id int64,
+	textoFinal string,
+	prioridadID int64,
+	estadoPuntoID int64,
+	categoriaID *int64,
+	responsableUsuarioID *int64,
+	fechaCompromiso *time.Time,
+	observaciones *string,
+) error {
+	var estadoAnteriorID int64
+
+	err := r.pool.QueryRow(ctx, `
+		SELECT estado_punto_id
+		FROM pliego_puntos
+		WHERE id = $1
+	`, id).Scan(&estadoAnteriorID)
+	if err != nil {
+		return err
+	}
+
+	query := `
+	UPDATE pliego_puntos
+	SET texto_final = $1,
+	    prioridad_id = $2,
+	    estado_punto_id = $3,
+	    categoria_id = $4,
+	    responsable_usuario_id = $5,
+	    fecha_compromiso = $6,
+	    observaciones = $7,
+	    requiere_validacion = false,
+	    updated_at = NOW()
+	WHERE id = $8
+	`
+
+	cmdTag, err := r.pool.Exec(
+		ctx,
+		query,
+		textoFinal,
+		prioridadID,
+		estadoPuntoID,
+		categoriaID,
+		responsableUsuarioID,
+		fechaCompromiso,
+		observaciones,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("punto no encontrado")
+	}
+
+	tipoMovimiento := "observacion"
+	comentario := "Punto actualizado manualmente"
+
+	var estadoAnteriorPtr *int64
+	var estadoNuevoPtr *int64
+
+	if estadoAnteriorID != estadoPuntoID {
+		tipoMovimiento = "cambio_estado"
+		comentario = "Cambio de estado del punto"
+		estadoAnteriorPtr = &estadoAnteriorID
+		estadoNuevoPtr = &estadoPuntoID
+	}
+
+	_, err = r.pool.Exec(ctx, `
+		INSERT INTO punto_seguimientos (
+			punto_id,
+			tipo_movimiento,
+			comentario,
+			estado_anterior_id,
+			estado_nuevo_id
+		) VALUES ($1, $2, $3, $4, $5)
+	`,
+		id,
+		tipoMovimiento,
+		comentario,
+		estadoAnteriorPtr,
+		estadoNuevoPtr,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

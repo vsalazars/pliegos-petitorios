@@ -122,6 +122,46 @@ func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 	})
 }
 
+
+func (h *PliegoPuntoHandler) UpdateTextoFinal(c *gin.Context) {
+	idParam := c.Param("punto_id")
+
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil || id <= 0 {
+		response.Error(c, http.StatusBadRequest, "punto_id inválido")
+		return
+	}
+
+	var body struct {
+		TextoFinal string `json:"texto_final" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "payload inválido")
+		return
+	}
+
+	body.TextoFinal = strings.TrimSpace(body.TextoFinal)
+	if body.TextoFinal == "" {
+		response.Error(c, http.StatusBadRequest, "texto_final vacío")
+		return
+	}
+
+	err = h.pliegoPuntoRepo.UpdateTextoFinal(
+		c.Request.Context(),
+		id,
+		body.TextoFinal,
+	)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "error actualizando punto")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"ok": true,
+	})
+}
+
 func parsePliegoIDParamFromPunto(c *gin.Context) (int64, bool) {
 	idParam := strings.TrimSpace(c.Param("id"))
 	if idParam == "" {
@@ -136,4 +176,68 @@ func parsePliegoIDParamFromPunto(c *gin.Context) (int64, bool) {
 	}
 
 	return id, true
+}
+
+
+func (h *PliegoPuntoHandler) UpdateCompleto(c *gin.Context) {
+	idParam := c.Param("punto_id")
+
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil || id <= 0 {
+		response.Error(c, http.StatusBadRequest, "punto_id inválido")
+		return
+	}
+
+	var req struct {
+		TextoFinal           string  `json:"texto_final" binding:"required"`
+		PrioridadID          int64   `json:"prioridad_id" binding:"required"`
+		EstadoPuntoID        int64   `json:"estado_punto_id" binding:"required"`
+		CategoriaID          *int64  `json:"categoria_id"`
+		ResponsableUsuarioID *int64  `json:"responsable_usuario_id"`
+		FechaCompromiso      *string `json:"fecha_compromiso"`
+		Observaciones        *string `json:"observaciones"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "payload inválido")
+		return
+	}
+
+	req.TextoFinal = strings.TrimSpace(req.TextoFinal)
+
+	if req.TextoFinal == "" || req.PrioridadID <= 0 || req.EstadoPuntoID <= 0 {
+		response.Error(c, http.StatusBadRequest, "campos obligatorios faltantes")
+		return
+	}
+
+	var fechaCompromiso *time.Time
+	if req.FechaCompromiso != nil && strings.TrimSpace(*req.FechaCompromiso) != "" {
+		parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*req.FechaCompromiso))
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "fecha inválida")
+			return
+		}
+		fechaCompromiso = &parsed
+	}
+
+	err = h.pliegoPuntoRepo.UpdateCompleto(
+		c.Request.Context(),
+		id,
+		req.TextoFinal,
+		req.PrioridadID,
+		req.EstadoPuntoID,
+		req.CategoriaID,
+		req.ResponsableUsuarioID,
+		fechaCompromiso,
+		req.Observaciones,
+	)
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "error actualizando punto")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"ok": true,
+	})
 }

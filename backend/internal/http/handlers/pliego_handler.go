@@ -55,8 +55,6 @@ type CreatePliegoDesdePDFRequest struct {
 	Observaciones          *string `json:"observaciones"`
 }
 
-
-
 type UpdateRevisionOCRPuntoRequest struct {
 	NumeroPunto      int    `json:"numero_punto" binding:"required"`
 	TextoOriginalOCR string `json:"texto_original_ocr"`
@@ -68,7 +66,6 @@ type UpdateRevisionOCRRequest struct {
 	EstadoClaveDestino string                         `json:"estado_clave_destino" binding:"required"`
 	Puntos             []UpdateRevisionOCRPuntoRequest `json:"puntos"`
 }
-
 
 func NewPliegoHandler(
 	pliegoRepo *repository.PliegoRepository,
@@ -107,13 +104,20 @@ func (h *PliegoHandler) GetByID(c *gin.Context) {
 			response.Error(c, http.StatusNotFound, "pliego no encontrado")
 			return
 		}
-
 		response.Error(c, http.StatusInternalServerError, "error obteniendo pliego")
 		return
 	}
 
+	// 🔥 NUEVO: traer puntos
+	puntos, err := h.pliegoPuntoRepo.ListByPliegoID(c.Request.Context(), id)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "error obteniendo puntos del pliego")
+		return
+	}
+
 	response.OK(c, gin.H{
-		"item": item,
+		"item":   item,
+		"puntos": puntos,
 	})
 }
 
@@ -233,6 +237,11 @@ func (h *PliegoHandler) CreateDesdePDF(c *gin.Context) {
 		return
 	}
 
+	if parseResp == nil || parseResp.Data == nil {
+		response.Error(c, http.StatusInternalServerError, "respuesta inválida del parser Python")
+		return
+	}
+
 	var textoOCRBruto *string
 	if strings.TrimSpace(parseResp.Data.TextoOCRBruto) != "" {
 		texto := strings.TrimSpace(parseResp.Data.TextoOCRBruto)
@@ -281,6 +290,33 @@ func (h *PliegoHandler) CreateDesdePDF(c *gin.Context) {
 
 		response.Error(c, http.StatusInternalServerError, "error creando pliego desde PDF")
 		return
+	}
+
+	// Guardar puntos detectados automáticamente
+	if len(parseResp.Data.PuntosDetectados) > 0 {
+		puntos := make([]repository.CreatePliegoPuntoFromOCRInput, 0, len(parseResp.Data.PuntosDetectados))
+
+		for _, p := range parseResp.Data.PuntosDetectados {
+			textoFinal := strings.TrimSpace(p.TextoFinalSugerido)
+			textoOriginalOCR := strings.TrimSpace(p.TextoOriginalOCR)
+
+			if p.NumeroPunto <= 0 || textoFinal == "" {
+				continue
+			}
+
+			puntos = append(puntos, repository.CreatePliegoPuntoFromOCRInput{
+				NumeroPunto:      p.NumeroPunto,
+				TextoOriginalOCR: textoOriginalOCR,
+				TextoFinal:       textoFinal,
+			})
+		}
+
+		if len(puntos) > 0 {
+			if err := h.pliegoPuntoRepo.CreateFromOCR(c.Request.Context(), item.ID, puntos); err != nil {
+				response.Error(c, http.StatusInternalServerError, "error guardando puntos OCR del pliego")
+				return
+			}
+		}
 	}
 
 	puntosDetectados := make([]gin.H, 0, len(parseResp.Data.PuntosDetectados))

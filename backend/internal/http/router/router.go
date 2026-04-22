@@ -95,10 +95,12 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.POST("/pliegos", pliegoHandler.Create)
 		unidad.POST("/pliegos/desde-pdf", pliegoHandler.CreateDesdePDF)
 		unidad.PUT("/pliegos/:id/revision-ocr", pliegoHandler.UpdateRevisionOCR)
+		unidad.PUT("/pliegos/:id/puntos/:punto_id/completo", pliegoPuntoHandler.UpdateCompleto)
 
 		// PUNTOS DEL PLIEGO
 		unidad.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
 		unidad.POST("/pliegos/:id/puntos", pliegoPuntoHandler.Create)
+		unidad.PUT("/pliegos/:id/puntos/:punto_id", pliegoPuntoHandler.UpdateTextoFinal)
 	}
 
 	return r
