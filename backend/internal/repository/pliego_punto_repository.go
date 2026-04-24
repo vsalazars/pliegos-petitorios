@@ -17,6 +17,7 @@ import (
 
 var ErrPliegoPuntoNotFound = errors.New("punto de pliego no encontrado")
 var ErrPliegoPuntoNumeroDuplicado = errors.New("el número de punto ya existe en el pliego")
+var ErrPliegoPuntoDeleteBlocked = errors.New("el punto no se puede eliminar porque ya tiene historial asociado")
 
 type PliegoPuntoRepository struct {
 	pool *pgxpool.Pool
@@ -780,6 +781,75 @@ func (r *PliegoPuntoRepository) UpdateTextoFinalByUnidadID(
 
 	if cmdTag.RowsAffected() == 0 {
 		return fmt.Errorf("punto no encontrado")
+	}
+
+	return nil
+}
+
+func (r *PliegoPuntoRepository) DeleteByUnidadID(
+	ctx context.Context,
+	unidadID int64,
+	id int64,
+) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("iniciar transacción para eliminar punto: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var puntoExists bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM pliego_puntos pp
+			INNER JOIN pliegos p ON p.id = pp.pliego_id
+			WHERE pp.id = $1
+			  AND p.unidad_id = $2
+		)
+	`, id, unidadID).Scan(&puntoExists)
+	if err != nil {
+		return fmt.Errorf("verificar punto por unidad: %w", err)
+	}
+	if !puntoExists {
+		return ErrPliegoPuntoNotFound
+	}
+
+	var hasDependencies bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM punto_evidencias WHERE punto_id = $1
+			UNION ALL
+			SELECT 1 FROM punto_validaciones WHERE punto_id = $1
+			UNION ALL
+			SELECT 1 FROM punto_seguimientos WHERE punto_id = $1
+		)
+	`, id).Scan(&hasDependencies)
+	if err != nil {
+		return fmt.Errorf("verificar dependencias del punto: %w", err)
+	}
+	if hasDependencies {
+		return ErrPliegoPuntoDeleteBlocked
+	}
+
+	cmdTag, err := tx.Exec(ctx, `
+		DELETE FROM pliego_puntos pp
+		USING pliegos p
+		WHERE pp.id = $1
+		  AND p.id = pp.pliego_id
+		  AND p.unidad_id = $2
+	`, id, unidadID)
+	if err != nil {
+		return fmt.Errorf("eliminar punto por unidad: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return ErrPliegoPuntoNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("confirmar eliminación de punto: %w", err)
 	}
 
 	return nil

@@ -70,6 +70,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"user": gin.H{
 			"id":                    user.ID,
 			"unidad_id":             user.UnidadID,
+			"unidad_clave":          user.UnidadClave,
+			"unidad_nombre":         user.UnidadNombre,
 			"rol_id":                user.RolID,
 			"rol_clave":             user.RolClave,
 			"rol_nombre":            user.RolNombre,
@@ -100,6 +102,8 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		"user": gin.H{
 			"id":                    claims.UserID,
 			"unidad_id":             claims.UnidadID,
+			"unidad_clave":          claims.UnidadClave,
+			"unidad_nombre":         claims.UnidadNombre,
 			"rol_id":                claims.RolID,
 			"rol_clave":             claims.RolClave,
 			"ambito":                claims.Ambito,

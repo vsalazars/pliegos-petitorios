@@ -50,9 +50,12 @@ func (r *UserRepository) List(ctx context.Context) ([]domain.UserWithRole, error
 			u.updated_at,
 			r.clave AS rol_clave,
 			r.nombre AS rol_nombre,
-			r.ambito
+			r.ambito,
+			ua.clave AS unidad_clave,
+			ua.nombre AS unidad_nombre
 		FROM usuarios u
 		INNER JOIN roles r ON r.id = u.rol_id
+		LEFT JOIN unidades_academicas ua ON ua.id = u.unidad_id
 		ORDER BY u.nombre ASC, u.apellido_paterno ASC, u.apellido_materno ASC, u.id ASC;
 	`
 
@@ -91,6 +94,8 @@ func (r *UserRepository) List(ctx context.Context) ([]domain.UserWithRole, error
 			&user.RolClave,
 			&user.RolNombre,
 			&user.Ambito,
+			&user.UnidadClave,
+			&user.UnidadNombre,
 		); err != nil {
 			return nil, fmt.Errorf("scan usuario: %w", err)
 		}
@@ -127,9 +132,12 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*domain.UserWit
 			u.updated_at,
 			r.clave AS rol_clave,
 			r.nombre AS rol_nombre,
-			r.ambito
+			r.ambito,
+			ua.clave AS unidad_clave,
+			ua.nombre AS unidad_nombre
 		FROM usuarios u
 		INNER JOIN roles r ON r.id = u.rol_id
+		LEFT JOIN unidades_academicas ua ON ua.id = u.unidad_id
 		WHERE u.id = $1
 		LIMIT 1;
 	`
@@ -160,6 +168,8 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*domain.UserWit
 		&user.RolClave,
 		&user.RolNombre,
 		&user.Ambito,
+		&user.UnidadClave,
+		&user.UnidadNombre,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -351,9 +361,12 @@ func (r *UserRepository) FindByUsernameOrEmail(ctx context.Context, login string
 			u.updated_at,
 			r.clave AS rol_clave,
 			r.nombre AS rol_nombre,
-			r.ambito
+			r.ambito,
+			ua.clave AS unidad_clave,
+			ua.nombre AS unidad_nombre
 		FROM usuarios u
 		INNER JOIN roles r ON r.id = u.rol_id
+		LEFT JOIN unidades_academicas ua ON ua.id = u.unidad_id
 		WHERE u.username = $1 OR u.correo = $1
 		LIMIT 1;
 	`
@@ -384,6 +397,8 @@ func (r *UserRepository) FindByUsernameOrEmail(ctx context.Context, login string
 		&user.RolClave,
 		&user.RolNombre,
 		&user.Ambito,
+		&user.UnidadClave,
+		&user.UnidadNombre,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

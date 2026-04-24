@@ -335,3 +335,93 @@ func (r *PuntoValidacionRepository) GetByID(ctx context.Context, id int64) (*dom
 
 	return &item, nil
 }
+
+func (r *PuntoValidacionRepository) ListRecentForDashboard(
+	ctx context.Context,
+	resultado string,
+	limit int,
+) ([]domain.PuntoValidacionDashboardReciente, error) {
+	const query = `
+		SELECT
+			pv.id,
+			pv.punto_id,
+			pv.usuario_validador_id,
+			pv.resultado,
+			pv.motivo_rechazo_id,
+			pv.comentario,
+			pv.es_vigente,
+			pv.created_at,
+			u.username,
+			CASE
+				WHEN u.id IS NULL THEN NULL
+				ELSE TRIM(CONCAT(u.nombre, ' ', COALESCE(u.apellido_paterno, ''), ' ', COALESCE(u.apellido_materno, '')))
+			END AS nombre_usuario,
+			mr.clave AS motivo_rechazo_clave,
+			mr.nombre AS motivo_rechazo_nombre,
+			pp.pliego_id,
+			p.unidad_id,
+			ua.clave AS unidad_clave,
+			ua.nombre AS unidad_nombre,
+			p.folio AS folio_pliego,
+			p.titulo AS titulo_pliego,
+			pp.numero_punto
+		FROM punto_validaciones pv
+		INNER JOIN pliego_puntos pp ON pp.id = pv.punto_id
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		INNER JOIN unidades_academicas ua ON ua.id = p.unidad_id
+		LEFT JOIN usuarios u ON u.id = pv.usuario_validador_id
+		LEFT JOIN motivos_rechazo mr ON mr.id = pv.motivo_rechazo_id
+		WHERE pv.resultado = $1
+		ORDER BY pv.created_at DESC, pv.id DESC
+		LIMIT $2;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	resultado = strings.TrimSpace(strings.ToLower(resultado))
+	if limit <= 0 {
+		limit = 5
+	}
+
+	rows, err := r.pool.Query(ctx, query, resultado, limit)
+	if err != nil {
+		return nil, fmt.Errorf("listar validaciones recientes para dashboard: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]domain.PuntoValidacionDashboardReciente, 0, limit)
+	for rows.Next() {
+		var item domain.PuntoValidacionDashboardReciente
+		if err := rows.Scan(
+			&item.ID,
+			&item.PuntoID,
+			&item.UsuarioValidadorID,
+			&item.Resultado,
+			&item.MotivoRechazoID,
+			&item.Comentario,
+			&item.EsVigente,
+			&item.CreatedAt,
+			&item.Username,
+			&item.NombreUsuario,
+			&item.MotivoRechazoClave,
+			&item.MotivoRechazoNombre,
+			&item.PliegoID,
+			&item.UnidadID,
+			&item.UnidadClave,
+			&item.UnidadNombre,
+			&item.FolioPliego,
+			&item.TituloPliego,
+			&item.NumeroPunto,
+		); err != nil {
+			return nil, fmt.Errorf("scan validación reciente para dashboard: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterar validaciones recientes para dashboard: %w", err)
+	}
+
+	return items, nil
+}

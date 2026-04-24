@@ -251,6 +251,48 @@ func (h *PliegoPuntoHandler) UpdateTextoFinal(c *gin.Context) {
 	})
 }
 
+func (h *PliegoPuntoHandler) Delete(c *gin.Context) {
+	idParam := c.Param("punto_id")
+
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil || id <= 0 {
+		response.Error(c, http.StatusBadRequest, "punto_id inválido")
+		return
+	}
+
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok {
+		return
+	}
+	if !scoped {
+		response.Error(c, http.StatusForbidden, "operación no permitida")
+		return
+	}
+
+	err = h.pliegoPuntoRepo.DeleteByUnidadID(
+		c.Request.Context(),
+		*unidadID,
+		id,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrPliegoPuntoNotFound):
+			response.Error(c, http.StatusNotFound, "punto no encontrado")
+			return
+		case errors.Is(err, repository.ErrPliegoPuntoDeleteBlocked):
+			response.Error(c, http.StatusConflict, "el punto no se puede eliminar porque ya tiene historial asociado")
+			return
+		default:
+			response.Error(c, http.StatusInternalServerError, "error eliminando punto")
+			return
+		}
+	}
+
+	response.OK(c, gin.H{
+		"ok": true,
+	})
+}
+
 func parsePliegoIDParamFromPunto(c *gin.Context) (int64, bool) {
 	idParam := strings.TrimSpace(c.Param("id"))
 	if idParam == "" {

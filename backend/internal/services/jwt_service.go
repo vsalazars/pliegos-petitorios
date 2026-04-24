@@ -12,19 +12,21 @@ import (
 )
 
 type JWTService struct {
-	secret      []byte
-	expiresIn   time.Duration
+	secret    []byte
+	expiresIn time.Duration
 }
 
 type UserClaims struct {
-	UserID               int64  `json:"user_id"`
-	UnidadID             *int64 `json:"unidad_id,omitempty"`
-	RolID                int64  `json:"rol_id"`
-	RolClave             string `json:"rol_clave"`
-	Ambito               string `json:"ambito"`
-	Username             string `json:"username"`
-	Correo               string `json:"correo"`
-	DebeCambiarPassword  bool   `json:"debe_cambiar_password"`
+	UserID              int64   `json:"user_id"`
+	UnidadID            *int64  `json:"unidad_id,omitempty"`
+	UnidadClave         *string `json:"unidad_clave,omitempty"`
+	UnidadNombre        *string `json:"unidad_nombre,omitempty"`
+	RolID               int64   `json:"rol_id"`
+	RolClave            string  `json:"rol_clave"`
+	Ambito              string  `json:"ambito"`
+	Username            string  `json:"username"`
+	Correo              string  `json:"correo"`
+	DebeCambiarPassword bool    `json:"debe_cambiar_password"`
 	jwt.RegisteredClaims
 }
 
@@ -47,6 +49,8 @@ func (s *JWTService) GenerateToken(user *domain.UserWithRole) (string, time.Time
 	claims := UserClaims{
 		UserID:              user.ID,
 		UnidadID:            user.UnidadID,
+		UnidadClave:         user.UnidadClave,
+		UnidadNombre:        user.UnidadNombre,
 		RolID:               user.RolID,
 		RolClave:            user.RolClave,
 		Ambito:              user.Ambito,

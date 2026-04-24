@@ -20,3 +20,14 @@ type PuntoValidacionWithDetalle struct {
 	MotivoRechazoClave  *string `db:"motivo_rechazo_clave" json:"motivo_rechazo_clave,omitempty"`
 	MotivoRechazoNombre *string `db:"motivo_rechazo_nombre" json:"motivo_rechazo_nombre,omitempty"`
 }
+
+type PuntoValidacionDashboardReciente struct {
+	PuntoValidacionWithDetalle
+	PliegoID     int64  `db:"pliego_id" json:"pliego_id"`
+	UnidadID     int64  `db:"unidad_id" json:"unidad_id"`
+	UnidadClave  string `db:"unidad_clave" json:"unidad_clave"`
+	UnidadNombre string `db:"unidad_nombre" json:"unidad_nombre"`
+	FolioPliego  string `db:"folio_pliego" json:"folio_pliego"`
+	TituloPliego string `db:"titulo_pliego" json:"titulo_pliego"`
+	NumeroPunto  int    `db:"numero_punto" json:"numero_punto"`
+}
