@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { DESMetricCard } from "@/components/dashboard/des/des-metric-card"
+import { DESOperationalDashboard } from "@/components/dashboard/des/des-operational-dashboard"
 import { DESUserCreateForm } from "@/components/dashboard/des/des-user-create-form"
 import { DESUserList } from "@/components/dashboard/des/des-user-list"
 import { DashboardShell } from "@/components/dashboard/shared/dashboard-shell"
 import { DashboardState } from "@/components/dashboard/shared/dashboard-state"
 import type { AuthUser } from "@/lib/auth"
 import { isUnidadRole, type DESRole, type DESUnidad, type DESUser } from "@/lib/des-admin"
+import type { DESDashboardOperationalData } from "@/lib/des-dashboard"
 
 type DESAdminResponse = {
   user: AuthUser
@@ -17,8 +19,12 @@ type DESAdminResponse = {
   usuarios: DESUser[]
 }
 
+type DESViewMode = "admin" | "operational"
+
 export function DESDashboardPage() {
+  const [viewMode, setViewMode] = useState<DESViewMode>("operational")
   const [data, setData] = useState<DESAdminResponse | null>(null)
+  const [operationalData, setOperationalData] = useState<DESDashboardOperationalData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -56,6 +62,7 @@ export function DESDashboardPage() {
         return
       }
 
+      setViewMode("admin")
       setError(null)
       setData({
         user: mePayload.user as AuthUser,
@@ -75,21 +82,8 @@ export function DESDashboardPage() {
 
     const loadInitial = async () => {
       try {
-        const [meResponse, unidadesResponse, rolesResponse, usuariosResponse] =
-          await Promise.all([
-            fetch("/api/auth/me", { cache: "no-store" }),
-            fetch("/api/admin/unidades", { cache: "no-store" }),
-            fetch("/api/admin/roles", { cache: "no-store" }),
-            fetch("/api/admin/usuarios", { cache: "no-store" }),
-          ])
-
-        const [mePayload, unidadesPayload, rolesPayload, usuariosPayload] =
-          await Promise.all([
-            meResponse.json(),
-            unidadesResponse.json(),
-            rolesResponse.json(),
-            usuariosResponse.json(),
-          ])
+        const meResponse = await fetch("/api/auth/me", { cache: "no-store" })
+        const mePayload = await meResponse.json()
 
         if (!isActive) {
           return
@@ -99,29 +93,70 @@ export function DESDashboardPage() {
           setError(mePayload.error ?? "No fue posible validar la sesión DES.")
           return
         }
-        if (!unidadesResponse.ok) {
-          setError(unidadesPayload.error ?? "No fue posible cargar unidades.")
-          return
-        }
-        if (!rolesResponse.ok) {
-          setError(rolesPayload.error ?? "No fue posible cargar roles.")
-          return
-        }
-        if (!usuariosResponse.ok) {
-          setError(usuariosPayload.error ?? "No fue posible cargar usuarios.")
+
+        const user = mePayload.user as AuthUser
+
+        if (user.rol_clave === "SUPERADMIN_DES") {
+          const [unidadesResponse, rolesResponse, usuariosResponse] = await Promise.all([
+            fetch("/api/admin/unidades", { cache: "no-store" }),
+            fetch("/api/admin/roles", { cache: "no-store" }),
+            fetch("/api/admin/usuarios", { cache: "no-store" }),
+          ])
+
+          const [unidadesPayload, rolesPayload, usuariosPayload] = await Promise.all([
+            unidadesResponse.json(),
+            rolesResponse.json(),
+            usuariosResponse.json(),
+          ])
+
+          if (!isActive) {
+            return
+          }
+
+          if (!unidadesResponse.ok) {
+            setError(unidadesPayload.error ?? "No fue posible cargar unidades.")
+            return
+          }
+          if (!rolesResponse.ok) {
+            setError(rolesPayload.error ?? "No fue posible cargar roles.")
+            return
+          }
+          if (!usuariosResponse.ok) {
+            setError(usuariosPayload.error ?? "No fue posible cargar usuarios.")
+            return
+          }
+
+          setViewMode("admin")
+          setOperationalData(null)
+          setError(null)
+          setData({
+            user,
+            unidades: (unidadesPayload.items ?? []) as DESUnidad[],
+            roles: (rolesPayload.items ?? []) as DESRole[],
+            usuarios: (usuariosPayload.items ?? []) as DESUser[],
+          })
           return
         }
 
+        const dashboardResponse = await fetch("/api/admin/dashboard", { cache: "no-store" })
+        const dashboardPayload = await dashboardResponse.json()
+
+        if (!isActive) {
+          return
+        }
+
+        if (!dashboardResponse.ok) {
+          setError(dashboardPayload.error ?? "No fue posible cargar el dashboard DES.")
+          return
+        }
+
+        setViewMode("operational")
         setError(null)
-        setData({
-          user: mePayload.user as AuthUser,
-          unidades: (unidadesPayload.items ?? []) as DESUnidad[],
-          roles: (rolesPayload.items ?? []) as DESRole[],
-          usuarios: (usuariosPayload.items ?? []) as DESUser[],
-        })
+        setData(null)
+        setOperationalData(dashboardPayload as DESDashboardOperationalData)
       } catch {
         if (isActive) {
-          setError("No fue posible conectar con la administración DES.")
+          setError("No fue posible conectar con el módulo DES.")
         }
       } finally {
         if (isActive) {
@@ -154,30 +189,47 @@ export function DESDashboardPage() {
     return (
       <DashboardShell
         badge="DES"
-        title="Administración DES"
-        subtitle="Estamos cargando unidades, perfiles y cuentas disponibles."
+        title="Dashboard DES"
+        subtitle="Estamos cargando la vista correspondiente a tu perfil DES."
       >
         <DashboardState
-          title="Cargando administración DES"
-          description="Estamos preparando el panel de altas para unidades académicas."
+          title="Cargando módulo DES"
+          description="Estamos preparando la administración o el tablero operativo según tu perfil."
         />
       </DashboardShell>
     )
   }
 
-  if (error || !data) {
+  if (error || (viewMode === "admin" && !data) || (viewMode === "operational" && !operationalData)) {
     return (
       <DashboardShell
-        badge="DES"
-        title="Administración DES"
-        subtitle="Este espacio concentra la creación y supervisión de cuentas por unidad."
+        badge="DIRECCIÓN DE EDUCACIÓN SUPERIOR"
+        title="Dashboard DES"
+        subtitle="Este espacio concentra administración de accesos y supervisión operativa DES."
       >
         <DashboardState
-          title="No pudimos abrir la administración DES"
+          title="No pudimos abrir el módulo DES"
           description={error ?? "Intenta recargar la sesión."}
         />
       </DashboardShell>
     )
+  }
+
+  if (viewMode === "operational" && operationalData) {
+    return (
+      <DashboardShell
+        badge="DIRECCIÓN DE EDUCACIÓN SUPERIOR"
+        title="Validación de las acciones de atención a los pliegos petitorios"
+        widthClassName="w-[90%] max-w-[1800px]"
+        lockViewport
+      >
+        <DESOperationalDashboard dashboard={operationalData} />
+      </DashboardShell>
+    )
+  }
+
+  if (!data) {
+    return null
   }
 
   const unidadUsers = data.usuarios

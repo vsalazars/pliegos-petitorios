@@ -52,6 +52,10 @@ func (r *PliegoPuntoRepository) ListByPliegoID(ctx context.Context, pliegoID int
 			pp.observaciones,
 			pp.created_at,
 			pp.updated_at,
+			COALESCE(ev.total_evidencias, 0) AS evidencias_count,
+			pv.resultado AS validacion_resultado_vigente,
+			pv.comentario AS validacion_comentario_vigente,
+			mr.nombre AS validacion_motivo_rechazo_nombre,
 			cp.clave AS categoria_clave,
 			cp.nombre AS categoria_nombre,
 			pr.clave AS prioridad_clave,
@@ -59,6 +63,13 @@ func (r *PliegoPuntoRepository) ListByPliegoID(ctx context.Context, pliegoID int
 			ep.clave AS estado_punto_clave,
 			ep.nombre AS estado_punto_nombre
 		FROM pliego_puntos pp
+		LEFT JOIN (
+			SELECT punto_id, COUNT(*) AS total_evidencias
+			FROM punto_evidencias
+			GROUP BY punto_id
+		) ev ON ev.punto_id = pp.id
+		LEFT JOIN punto_validaciones pv ON pv.punto_id = pp.id AND pv.es_vigente = TRUE
+		LEFT JOIN motivos_rechazo mr ON mr.id = pv.motivo_rechazo_id
 		LEFT JOIN categorias_punto cp ON cp.id = pp.categoria_id
 		INNER JOIN prioridades pr ON pr.id = pp.prioridad_id
 		INNER JOIN estados_punto ep ON ep.id = pp.estado_punto_id
@@ -101,6 +112,10 @@ func (r *PliegoPuntoRepository) ListByPliegoID(ctx context.Context, pliegoID int
 			&item.Observaciones,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&item.EvidenciasCount,
+			&item.ValidacionResultadoVigente,
+			&item.ValidacionComentarioVigente,
+			&item.ValidacionMotivoRechazoNombre,
 			&item.CategoriaClave,
 			&item.CategoriaNombre,
 			&item.PrioridadClave,
@@ -144,6 +159,10 @@ func (r *PliegoPuntoRepository) ListByPliegoIDAndUnidadID(ctx context.Context, p
 			pp.observaciones,
 			pp.created_at,
 			pp.updated_at,
+			COALESCE(ev.total_evidencias, 0) AS evidencias_count,
+			pv.resultado AS validacion_resultado_vigente,
+			pv.comentario AS validacion_comentario_vigente,
+			mr.nombre AS validacion_motivo_rechazo_nombre,
 			cp.clave AS categoria_clave,
 			cp.nombre AS categoria_nombre,
 			pr.clave AS prioridad_clave,
@@ -152,6 +171,13 @@ func (r *PliegoPuntoRepository) ListByPliegoIDAndUnidadID(ctx context.Context, p
 			ep.nombre AS estado_punto_nombre
 		FROM pliego_puntos pp
 		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		LEFT JOIN (
+			SELECT punto_id, COUNT(*) AS total_evidencias
+			FROM punto_evidencias
+			GROUP BY punto_id
+		) ev ON ev.punto_id = pp.id
+		LEFT JOIN punto_validaciones pv ON pv.punto_id = pp.id AND pv.es_vigente = TRUE
+		LEFT JOIN motivos_rechazo mr ON mr.id = pv.motivo_rechazo_id
 		LEFT JOIN categorias_punto cp ON cp.id = pp.categoria_id
 		INNER JOIN prioridades pr ON pr.id = pp.prioridad_id
 		INNER JOIN estados_punto ep ON ep.id = pp.estado_punto_id
@@ -194,6 +220,10 @@ func (r *PliegoPuntoRepository) ListByPliegoIDAndUnidadID(ctx context.Context, p
 			&item.Observaciones,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&item.EvidenciasCount,
+			&item.ValidacionResultadoVigente,
+			&item.ValidacionComentarioVigente,
+			&item.ValidacionMotivoRechazoNombre,
 			&item.CategoriaClave,
 			&item.CategoriaNombre,
 			&item.PrioridadClave,
@@ -326,6 +356,12 @@ func (r *PliegoPuntoRepository) ListAll(ctx context.Context, filters ListPuntosF
 			pp.observaciones,
 			pp.created_at,
 			pp.updated_at,
+			COALESCE(ev.total_evidencias, 0) AS evidencias_count,
+			p.unidad_id,
+			ua.clave AS unidad_clave,
+			ua.nombre AS unidad_nombre,
+			p.folio AS folio_pliego,
+			p.titulo AS titulo_pliego,
 			cp.clave AS categoria_clave,
 			cp.nombre AS categoria_nombre,
 			pr.clave AS prioridad_clave,
@@ -334,6 +370,12 @@ func (r *PliegoPuntoRepository) ListAll(ctx context.Context, filters ListPuntosF
 			ep.nombre AS estado_punto_nombre
 		FROM pliego_puntos pp
 		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		LEFT JOIN (
+			SELECT punto_id, COUNT(*) AS total_evidencias
+			FROM punto_evidencias
+			GROUP BY punto_id
+		) ev ON ev.punto_id = pp.id
+		LEFT JOIN unidades_academicas ua ON ua.id = p.unidad_id
 		LEFT JOIN categorias_punto cp ON cp.id = pp.categoria_id
 		INNER JOIN prioridades pr ON pr.id = pp.prioridad_id
 		INNER JOIN estados_punto ep ON ep.id = pp.estado_punto_id
@@ -420,6 +462,12 @@ func (r *PliegoPuntoRepository) ListAll(ctx context.Context, filters ListPuntosF
 			&item.Observaciones,
 			&item.CreatedAt,
 			&item.UpdatedAt,
+			&item.EvidenciasCount,
+			&item.UnidadID,
+			&item.UnidadClave,
+			&item.UnidadNombre,
+			&item.FolioPliego,
+			&item.TituloPliego,
 			&item.CategoriaClave,
 			&item.CategoriaNombre,
 			&item.PrioridadClave,

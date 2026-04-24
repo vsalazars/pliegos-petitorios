@@ -429,6 +429,25 @@ export function UnitPliegoPointCard({
           <p className="mt-2 text-sm leading-7 text-[#4a4a52]">{punto.observaciones}</p>
         </div>
       ) : null}
+
+      {hasDESMessage(punto) ? (
+        <div className="mt-4 rounded-2xl border border-[#ecd7dd] bg-[#fcf7f8] px-4 py-4">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#8b2740]">
+            Mensaje de la Dirección de Educación Superior
+          </p>
+          {punto.validacion_comentario_vigente?.trim() ? (
+            <p className="mt-2 text-sm leading-7 text-[#4a4a52]">
+              {punto.validacion_comentario_vigente.trim()}
+            </p>
+          ) : null}
+          {punto.validacion_motivo_rechazo_nombre?.trim() ? (
+            <p className="mt-2 text-sm leading-7 text-[#6a4a52]">
+              <span className="font-medium text-[#8b2740]">Motivo:</span>{" "}
+              {punto.validacion_motivo_rechazo_nombre.trim()}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -518,6 +537,13 @@ function resolveStatusTone(
     return "amber"
   }
   return "slate"
+}
+
+function hasDESMessage(punto: UnidadPliegoPunto): boolean {
+  return Boolean(
+    punto.validacion_comentario_vigente?.trim() ||
+      punto.validacion_motivo_rechazo_nombre?.trim(),
+  )
 }
 
 function resolveDisplayStatus(punto: UnidadPliegoPunto) {

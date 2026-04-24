@@ -34,6 +34,9 @@ export type UnidadPliegoPunto = {
   origen_captura: string
   requiere_validacion: boolean
   observaciones?: string | null
+  validacion_resultado_vigente?: string | null
+  validacion_comentario_vigente?: string | null
+  validacion_motivo_rechazo_nombre?: string | null
 }
 
 export type UnidadDashboardData = {

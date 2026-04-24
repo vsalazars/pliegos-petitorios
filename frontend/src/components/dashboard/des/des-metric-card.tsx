@@ -17,10 +17,10 @@ export function DESMetricCard({
   }[tone]
 
   return (
-    <Card className={`rounded-[1.6rem] py-0 ${toneClassName}`}>
-      <CardContent className="px-5 py-5">
-        <p className="text-sm opacity-80">{label}</p>
-        <p className="mt-3 font-heading text-4xl tracking-tight">{value}</p>
+    <Card className={`rounded-[1.35rem] py-0 ${toneClassName}`}>
+      <CardContent className="px-5 py-4">
+        <p className="text-[0.95rem] opacity-80">{label}</p>
+        <p className="mt-2 font-heading text-3xl tracking-tight">{value}</p>
       </CardContent>
     </Card>
   )

@@ -27,10 +27,19 @@ type PliegoPunto struct {
 
 type PliegoPuntoWithCatalogos struct {
 	PliegoPunto
-	CategoriaClave    *string `db:"categoria_clave" json:"categoria_clave,omitempty"`
-	CategoriaNombre   *string `db:"categoria_nombre" json:"categoria_nombre,omitempty"`
-	PrioridadClave    string  `db:"prioridad_clave" json:"prioridad_clave"`
-	PrioridadNombre   string  `db:"prioridad_nombre" json:"prioridad_nombre"`
-	EstadoPuntoClave  string  `db:"estado_punto_clave" json:"estado_punto_clave"`
-	EstadoPuntoNombre string  `db:"estado_punto_nombre" json:"estado_punto_nombre"`
+	EvidenciasCount               int     `db:"evidencias_count" json:"evidencias_count"`
+	UnidadID                      *int64  `db:"unidad_id" json:"unidad_id,omitempty"`
+	UnidadClave                   *string `db:"unidad_clave" json:"unidad_clave,omitempty"`
+	UnidadNombre                  *string `db:"unidad_nombre" json:"unidad_nombre,omitempty"`
+	FolioPliego                   *string `db:"folio_pliego" json:"folio_pliego,omitempty"`
+	TituloPliego                  *string `db:"titulo_pliego" json:"titulo_pliego,omitempty"`
+	CategoriaClave                *string `db:"categoria_clave" json:"categoria_clave,omitempty"`
+	CategoriaNombre               *string `db:"categoria_nombre" json:"categoria_nombre,omitempty"`
+	PrioridadClave                string  `db:"prioridad_clave" json:"prioridad_clave"`
+	PrioridadNombre               string  `db:"prioridad_nombre" json:"prioridad_nombre"`
+	EstadoPuntoClave              string  `db:"estado_punto_clave" json:"estado_punto_clave"`
+	EstadoPuntoNombre             string  `db:"estado_punto_nombre" json:"estado_punto_nombre"`
+	ValidacionResultadoVigente    *string `db:"validacion_resultado_vigente" json:"validacion_resultado_vigente,omitempty"`
+	ValidacionComentarioVigente   *string `db:"validacion_comentario_vigente" json:"validacion_comentario_vigente,omitempty"`
+	ValidacionMotivoRechazoNombre *string `db:"validacion_motivo_rechazo_nombre" json:"validacion_motivo_rechazo_nombre,omitempty"`
 }

@@ -94,6 +94,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 
 		// ROLES
 		admin.GET("/roles", rolHandler.List)
+		admin.GET("/catalogos/motivos-rechazo", catalogoHandler.ListMotivosRechazo)
 
 		// PLIEGOS - consulta / supervisión
 		admin.GET("/pliegos", pliegoHandler.List)
@@ -104,6 +105,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		admin.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
 		admin.GET("/puntos/:punto_id/seguimientos", puntoSeguimientoHandler.ListByPuntoIDAdmin)
 		admin.GET("/puntos/:punto_id/evidencias", puntoEvidenciaHandler.ListByPuntoIDAdmin)
+		admin.GET("/evidencias/:evidencia_id/archivo", puntoEvidenciaHandler.DownloadAdmin)
 		admin.GET("/puntos/:punto_id/validaciones", puntoValidacionHandler.ListByPuntoIDAdmin)
 		admin.POST("/puntos/:punto_id/validaciones", puntoValidacionHandler.CreateAdmin)
 	}
