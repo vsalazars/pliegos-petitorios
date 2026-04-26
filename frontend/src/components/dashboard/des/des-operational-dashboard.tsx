@@ -27,6 +27,7 @@ type DESOperationalDashboardProps = {
 
 export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationalDashboardProps) {
   void _dashboard
+  const pliegosPerPage = 3
   const [search, setSearch] = useState("")
   const [unidades, setUnidades] = useState<DESUnidad[]>([])
   const [pliegos, setPliegos] = useState<DESPliegoItem[]>([])
@@ -40,6 +41,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
   const [selectedUnidadId, setSelectedUnidadId] = useState<string>("")
   const [selectedPliegoId, setSelectedPliegoId] = useState<number | null>(null)
   const [selectedPointId, setSelectedPointId] = useState<number | null>(null)
+  const [pliegosPage, setPliegosPage] = useState(1)
   const [isLoadingData, setIsLoadingData] = useState(true)
 
   const loadData = async () => {
@@ -179,6 +181,13 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
     selectedPliegoId && pliegosDeUnidad.some((item) => item.id === selectedPliegoId)
       ? selectedPliegoId
       : pliegosDeUnidad[0]?.id ?? null
+
+  const totalPliegoPages = Math.max(1, Math.ceil(pliegosDeUnidad.length / pliegosPerPage))
+  const currentPliegosPage = Math.min(pliegosPage, totalPliegoPages)
+  const paginatedPliegos = useMemo(() => {
+    const start = (currentPliegosPage - 1) * pliegosPerPage
+    return pliegosDeUnidad.slice(start, start + pliegosPerPage)
+  }, [currentPliegosPage, pliegosDeUnidad])
 
   useEffect(() => {
     if (!activePliegoId) {
@@ -364,16 +373,16 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
     puntosFiltrados.find((item) => item.id === activePointId) ?? puntosFiltrados[0] ?? null
 
   return (
-    <div className="flex h-[calc(100vh-14rem)] min-h-[640px] flex-col gap-4 overflow-hidden">
-      <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[0.72fr_1.28fr]">
-        <Card className="flex h-full min-h-0 flex-col rounded-[1.8rem] border-[#ddd8de] py-0">
+    <div className="flex min-h-0 flex-col gap-4 lg:h-[calc(100vh-14rem)] lg:overflow-hidden">
+      <section className="grid gap-4 lg:min-h-0 lg:flex-1 xl:grid-cols-[0.72fr_1.28fr]">
+        <Card className="flex min-h-0 max-h-[calc(100vh-12rem)] flex-col overflow-hidden rounded-[1.8rem] border-[#ddd8de] py-0 lg:h-full lg:max-h-none">
           <CardHeader className="px-6 pt-6">
             <CardTitle className="text-2xl text-[#5f1024]">Pliegos por unidad académica</CardTitle>
             <CardDescription>
               Selecciona una unidad académica y luego el pliego a revisar.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6 pb-6">
             <select
               value={activeUnidadId}
               onChange={(event) => {
@@ -385,6 +394,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
                 setSelectedApprovalFilter("all")
                 setSelectedPrioridadFilter("all")
                 setSelectedCategoriaFilter("all")
+                setPliegosPage(1)
               }}
               className="h-12 w-full rounded-2xl border border-[#ddd9de] bg-white px-4 text-sm text-[#35353b] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
             >
@@ -399,7 +409,10 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#8a8a91]" />
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPliegosPage(1)
+                }}
                 placeholder="Buscar pliego por folio o título"
                 className="h-12 w-full rounded-2xl border border-[#ddd9de] bg-white pl-11 pr-4 text-sm text-[#35353b] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
               />
@@ -414,13 +427,13 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
               </p>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
               {isLoadingData ? (
                 <EmptyState message="Cargando unidades y pliegos..." />
               ) : pliegosDeUnidad.length === 0 ? (
                 <EmptyState message="No hay pliegos para esta unidad con ese filtro." />
               ) : (
-                pliegosDeUnidad.map((pliego) => {
+                paginatedPliegos.map((pliego) => {
                   const totalPuntos = puntos.filter((item) => item.pliego_id === pliego.id).length
 
                   return (
@@ -457,6 +470,35 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
                 })
               )}
             </div>
+
+            {pliegosDeUnidad.length > pliegosPerPage ? (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-3 text-sm text-[#66666d]">
+                <p>
+                  Página <span className="font-medium text-[#3e4047]">{currentPliegosPage}</span> de{" "}
+                  <span className="font-medium text-[#3e4047]">{totalPliegoPages}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPliegosPage((current) => Math.max(1, current - 1))}
+                    disabled={currentPliegosPage === 1}
+                    className="rounded-full border border-[#ddd9de] px-3 py-1.5 text-sm text-[#5f5f67] transition hover:border-[#c9bcc2] hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPliegosPage((current) => Math.min(totalPliegoPages, current + 1))
+                    }
+                    disabled={currentPliegosPage === totalPliegoPages}
+                    className="rounded-full border border-[#ddd9de] px-3 py-1.5 text-sm text-[#5f5f67] transition hover:border-[#c9bcc2] hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

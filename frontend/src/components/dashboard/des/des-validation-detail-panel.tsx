@@ -298,14 +298,14 @@ export function DESValidationDetailPanel({
         </section>
 
         <section className="space-y-3">
-          <h3 className="font-medium text-[#5f1024]">Dictamen DES</h3>
+          <h3 className="font-medium text-[#5f1024]">Dictamen de la Dirección de Educación Superior</h3>
           <div className="space-y-2">
             <Label htmlFor="comentario-validacion">Comentario</Label>
             <Textarea
               id="comentario-validacion"
               value={comentario}
               onChange={(event) => setComentario(event.target.value)}
-              placeholder="Agrega contexto para la unidad o el historial DES."
+              placeholder="Agrega contexto para la unidad o el historial de la Dirección de Educación Superior."
               className="min-h-24 rounded-2xl border-[#ddd9de] bg-white text-sm text-[#35353b] focus-visible:border-[#8f1d35] focus-visible:ring-[#f3eaed]"
             />
           </div>
@@ -608,7 +608,7 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition ${
+      className={`inline-flex h-10 items-center gap-2 rounded-full border px-3 text-sm font-medium transition ${
         active
           ? `${toneClassName} shadow-sm`
           : "border-[#ddd9de] bg-white text-[#5f5f67] hover:border-[#c9bcc2] hover:bg-[#fcf9fa]"
