@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock3, FileText, LoaderCircle } from "lucide-react"
+import { ArrowUpRight, Clock3, FileText, LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import {
@@ -777,7 +777,7 @@ export function DESExecutiveMobileDashboard({
                               />
                               <SmallTag label={item.prioridad_nombre} tone="amber" />
                               {item.categoria_nombre ? (
-                                <SmallTag label={item.categoria_nombre} tone="green" />
+                                <SmallTag label={item.categoria_nombre} tone="blue" />
                               ) : null}
                             </div>
                           </article>
@@ -903,7 +903,7 @@ export function DESExecutiveMobileDashboard({
                               <div className="flex flex-wrap items-center gap-2 text-sm">
                                 <SmallTag label={item.prioridad_nombre} tone="amber" />
                                 {item.categoria_nombre ? (
-                                  <SmallTag label={item.categoria_nombre} tone="green" />
+                                  <SmallTag label={item.categoria_nombre} tone="blue" />
                                 ) : null}
                               </div>
 
@@ -944,22 +944,23 @@ export function DESExecutiveMobileDashboard({
                                           href={`/api/admin/evidencias/${evidencia.id}/archivo`}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="flex items-center justify-between gap-3 rounded-xl border border-[#ece8ec] bg-[#faf8f9] px-3 py-3 text-sm text-[#5f1024]"
+                                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[#ece8ec] bg-[#faf8f9] px-3 py-3 text-sm text-[#5f1024] !no-underline hover:!no-underline focus:!no-underline [&_*]:!no-underline"
                                         >
                                           <span className="min-w-0">
-                                            <span className="flex items-center gap-2 font-medium">
+                                            <span className="flex min-w-0 items-start gap-2 font-medium">
                                               <FileText className="size-4 shrink-0" />
-                                              <span className="truncate">
+                                              <span className="min-w-0 break-words leading-5">
                                                 {evidencia.titulo?.trim() ||
                                                   evidencia.archivo.nombre_original}
                                               </span>
                                             </span>
-                                            <span className="mt-1 block text-xs text-[#8a8a91]">
+                                            <span className="mt-2 inline-flex rounded-full bg-[#eef5fb] px-2.5 py-1 text-[11px] font-medium text-[#345b7a]">
                                               {evidencia.tipo_evidencia_nombre}
                                             </span>
                                           </span>
-                                          <span className="shrink-0 text-xs text-[#8a8a91]">
-                                            Abrir
+                                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#e1dde3] bg-white px-2.5 py-1 text-[11px] font-medium text-[#8a8a91] no-underline">
+                                            Ver
+                                            <ArrowUpRight className="size-3" />
                                           </span>
                                         </a>
                                       ))}
@@ -1219,13 +1220,13 @@ function SmallTag({
   tone,
 }: {
   label: string
-  tone: "slate" | "rose" | "amber" | "green"
+  tone: "slate" | "rose" | "amber" | "blue"
 }) {
   const toneClassName = {
     slate: "bg-[#f2f4f7] text-[#55606d]",
     rose: "bg-[#f8ebef] text-[#8b2740]",
     amber: "bg-[#fff4de] text-[#8c5a08]",
-    green: "bg-[#edf6f1] text-[#2f6b4f]",
+    blue: "bg-[#eef5fb] text-[#345b7a]",
   }[tone]
 
   return (

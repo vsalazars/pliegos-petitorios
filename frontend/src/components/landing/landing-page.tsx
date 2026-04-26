@@ -1,81 +1,57 @@
 "use client"
 
-import { Waypoints } from "lucide-react"
+import Image from "next/image"
 import { useState } from "react"
 
 import { AccessModal } from "@/components/auth/access-modal"
-import { accessOptions } from "@/components/auth/access-options"
-import { AccessPortalCard } from "@/components/landing/access-portal-card"
-import { LandingHeader } from "@/components/landing/landing-header"
-import { LandingHighlights } from "@/components/landing/landing-highlights"
-
-const highlights = [
-  {
-    title: "Seguimiento claro",
-    description: "Un solo punto de entrada para revisar pliegos, puntos y atención operativa.",
-  },
-  {
-    title: "Escalable y mantenible",
-    description: "Componentes pequeños para crecer después con login real y dashboard visual.",
-  },
-  {
-    title: "Pensado para operación",
-    description: "Prioriza semáforos, rezago y acciones inmediatas por encima de numeralia suelta.",
-  },
-]
 
 export function LandingPage() {
   const [isLoginOpen, setIsLoginOpen] = useState(false)
 
-  const openLogin = () => {
-    setIsLoginOpen(true)
-  }
-
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-      <LandingHeader />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(122,23,48,0.08),_transparent_32%),linear-gradient(180deg,#fffafc_0%,#f8f3f6_48%,#eef4fb_100%)] px-5 py-8 sm:px-8">
       <AccessModal hideTrigger open={isLoginOpen} onOpenChange={setIsLoginOpen} />
 
-      <section className="grid gap-8 pb-12 pt-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-12">
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#ddd9de] bg-white/86 px-3 py-1 text-xs font-medium tracking-[0.22em] text-[#7a1730] uppercase shadow-sm backdrop-blur">
-            <Waypoints className="size-3.5" />
-            Plataforma Pliegos DES
-          </div>
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl items-center justify-center">
+        <div className="w-full rounded-[2rem] border border-[#e1dbe0] bg-white/88 px-6 py-8 text-center shadow-[0_18px_48px_rgba(95,16,36,0.08)] backdrop-blur sm:px-10 sm:py-10">
+          <div className="mx-auto flex max-w-2xl flex-col items-center">
+            <div className="relative h-24 w-24 sm:h-28 sm:w-28">
+              <Image
+                src="/logo-ipn.webp"
+                alt="Escudo del Instituto Politécnico Nacional"
+                fill
+                className="object-contain"
+                priority
+                sizes="128px"
+              />
+            </div>
 
-          <div className="space-y-4">
-            <p className="max-w-2xl font-heading text-5xl leading-none tracking-tight text-[#5f1024] sm:text-6xl">
-              Seguimiento de pliegos con entrada simple y base lista para crecer.
-            </p>
-            <p className="max-w-2xl text-base leading-7 text-[#55565d] sm:text-lg">
-              Esta landing sirve como punto de arranque para el proyecto. Desde aquí
-              después conectamos autenticación, roles y el dashboard operativo de DES
-              sin concentrar toda la interfaz en un solo archivo.
-            </p>
-          </div>
+            <div className="mt-5 space-y-1.5 text-center">
+              <p className="text-xs uppercase tracking-[0.28em] text-[#8f8690] sm:text-sm">
+                Instituto Politécnico Nacional
+              </p>
+              <p className="text-sm text-[#6d6d75] sm:text-base">Secretaría Académica</p>
+              <p className="text-sm text-[#6d6d75] sm:text-base">Dirección de Educación Superior</p>
+            </div>
 
-          <div className="flex flex-wrap gap-3">
-            <AccessModal triggerLabel="Iniciar sesión" open={isLoginOpen} onOpenChange={setIsLoginOpen} />
+            <div className="mt-7 space-y-3">
+              <h1 className="font-heading text-3xl leading-none tracking-tight text-[#5f1024] sm:text-5xl">
+                Sistema de Gestión de Pliegos Petitorios
+              </h1>
+              <p className="mx-auto max-w-xl text-sm leading-7 text-[#595a62] sm:text-base">
+                Plataforma institucional para registrar y dar seguimiento a pliegos
+                petitorios, concentrando la atención por unidad académica.
+              </p>
+            </div>
+
             <button
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#cfccd3] bg-white/82 px-5 text-sm font-medium text-[#55565d] transition hover:border-[#5f1024] hover:text-[#5f1024]"
-              onClick={openLogin}
               type="button"
+              onClick={() => setIsLoginOpen(true)}
+              className="mt-8 inline-flex h-11 items-center justify-center rounded-full bg-[#5f1024] px-7 text-sm font-medium text-white transition hover:bg-[#7a1730]"
             >
-              Ver acceso institucional
+              Iniciar sesión
             </button>
           </div>
-
-          <LandingHighlights items={highlights} />
-        </div>
-
-        <div className="grid gap-4">
-          {accessOptions.map((card) => (
-            <AccessPortalCard
-              key={card.id}
-              {...card}
-              onAccess={openLogin}
-            />
-          ))}
         </div>
       </section>
     </main>

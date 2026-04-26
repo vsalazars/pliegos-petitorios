@@ -1,8 +1,9 @@
 "use client"
 
-import { LockKeyhole, UserRound } from "lucide-react"
+import { Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { resolveDashboardPath } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
@@ -15,12 +16,11 @@ export function LoginPanel() {
   const router = useRouter()
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setError("")
     setIsSubmitting(true)
 
     try {
@@ -37,35 +37,34 @@ export function LoginPanel() {
 
       const data = await response.json()
       if (!response.ok) {
-        setError(data.error ?? "No fue posible iniciar sesión.")
+        toast.error(data.error ?? "No fue posible iniciar sesión.")
         return
       }
 
+      toast.success("Sesión iniciada correctamente.")
       router.push(data.redirect_to ?? resolveDashboardPath(data.user.rol_clave))
       router.refresh()
     } catch {
-      setError("No fue posible conectar con el servidor.")
+      toast.error("No fue posible conectar con el servidor.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <section className="flex h-full flex-col justify-between rounded-[1.6rem] border border-[#ddd9de] bg-white p-6 shadow-sm">
-      <div>
-        <Badge className="rounded-full border-0 bg-[#f3eaed] px-3 py-1 text-[11px] tracking-[0.2em] uppercase text-[#7a1730] hover:bg-[#f3eaed]">
-          Acceso institucional
-        </Badge>
+    <section className="rounded-[1.6rem] border border-[#ddd9de] bg-white p-6 shadow-sm">
+      <Badge className="rounded-full border-0 bg-[#f3eaed] px-3 py-1 text-[11px] tracking-[0.2em] uppercase text-[#7a1730] hover:bg-[#f3eaed]">
+        Acceso institucional
+      </Badge>
 
-        <div className="mt-5 space-y-2">
-          <h2 className="font-heading text-4xl tracking-tight text-[#5f1024]">Iniciar sesión</h2>
-          <p className="text-sm leading-7 text-[#63636b]">
-            Usa tus credenciales institucionales. El sistema identifica automáticamente
-            si perteneces a DES o a una unidad académica.
-          </p>
-        </div>
+      <div className="mt-5 space-y-2">
+        <h2 className="font-heading text-4xl tracking-tight text-[#5f1024]">Iniciar sesión</h2>
+        <p className="text-sm leading-7 text-[#63636b]">
+          Usa tus credenciales institucionales para ingresar al sistema.
+        </p>
+      </div>
 
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <Field
             id="login"
             label="Usuario o correo"
@@ -80,18 +79,23 @@ export function LoginPanel() {
             id="password"
             label="Contraseña"
             placeholder="••••••••"
-            type="password"
+            type={showPassword ? "text" : "password"}
             icon={<LockKeyhole className="size-4" />}
             focusClassName="focus-visible:border-[#8f1d35] focus-visible:ring-[#f3eaed]"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            trailingAction={
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="inline-flex size-9 items-center justify-center rounded-full text-[#8a8a91] transition hover:bg-[#f5f1f3] hover:text-[#5f1024] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8d7de]"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            }
           />
-
-          {error ? (
-            <div className="rounded-2xl border border-[#ead5db] bg-[#fbf5f7] px-4 py-3 text-sm text-[#7a1730]">
-              {error}
-            </div>
-          ) : null}
 
           <Button
             type="submit"
@@ -100,13 +104,7 @@ export function LoginPanel() {
           >
             {isSubmitting ? "Entrando..." : "Continuar"}
           </Button>
-        </form>
-      </div>
-
-      <div className="mt-6 rounded-[1.3rem] border border-[#e1dde2] bg-[#faf7f8] px-4 py-3 text-sm leading-6 text-[#66666d]">
-        Siguiente paso: conectar este formulario con <code>/auth/login</code> y redirigir
-        automáticamente según el rol devuelto por backend.
-      </div>
+      </form>
     </section>
   )
 }
@@ -120,6 +118,7 @@ type FieldProps = {
   focusClassName: string
   value: string
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  trailingAction?: React.ReactNode
 }
 
 function Field({
@@ -131,6 +130,7 @@ function Field({
   focusClassName,
   value,
   onChange,
+  trailingAction,
 }: FieldProps) {
   return (
     <div className="space-y-2">
@@ -148,8 +148,15 @@ function Field({
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={cn("h-12 rounded-2xl border-[#ddd9de] bg-white pl-11 pr-4 text-sm text-[#35353b]", focusClassName)}
+          className={cn(
+            "h-12 rounded-2xl border-[#ddd9de] bg-white pl-11 text-sm text-[#35353b]",
+            trailingAction ? "pr-12" : "pr-4",
+            focusClassName,
+          )}
         />
+        {trailingAction ? (
+          <span className="absolute inset-y-0 right-2 flex items-center">{trailingAction}</span>
+        ) : null}
       </div>
     </div>
   )
