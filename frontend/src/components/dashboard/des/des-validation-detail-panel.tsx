@@ -20,6 +20,7 @@ type DESValidationDetailPanelProps = {
   item: DESValidationQueueItem | null
   selectedPointFilter: "all" | "evidence:with"
   selectedStaleResponseFilter: string
+  selectedApprovalFilter: string
   selectedPrioridadFilter: string
   selectedCategoriaFilter: string
   priorityFilterOptions: Array<{ key: string; label: string; count: number }>
@@ -28,6 +29,7 @@ type DESValidationDetailPanelProps = {
   onSelectPoint: (pointId: number) => void
   onSelectPointFilter: (value: "all" | "evidence:with") => void
   onSelectStaleResponseFilter: (value: string) => void
+  onSelectApprovalFilter: (value: string) => void
   onSelectPrioridadFilter: (value: string) => void
   onSelectCategoriaFilter: (value: string) => void
   onValidated: () => Promise<void> | void
@@ -39,6 +41,7 @@ export function DESValidationDetailPanel({
   item,
   selectedPointFilter,
   selectedStaleResponseFilter,
+  selectedApprovalFilter,
   selectedPrioridadFilter,
   selectedCategoriaFilter,
   priorityFilterOptions,
@@ -47,6 +50,7 @@ export function DESValidationDetailPanel({
   onSelectPoint,
   onSelectPointFilter,
   onSelectStaleResponseFilter,
+  onSelectApprovalFilter,
   onSelectPrioridadFilter,
   onSelectCategoriaFilter,
   onValidated,
@@ -182,6 +186,7 @@ export function DESValidationDetailPanel({
               evidenceCount={points.filter((point) => (point.evidencias_count ?? 0) > 0).length}
               selectedPointFilter={selectedPointFilter}
               selectedStaleResponseFilter={selectedStaleResponseFilter}
+              selectedApprovalFilter={selectedApprovalFilter}
               selectedPrioridadFilter={selectedPrioridadFilter}
               selectedCategoriaFilter={selectedCategoriaFilter}
               priorityFilterOptions={priorityFilterOptions}
@@ -189,6 +194,7 @@ export function DESValidationDetailPanel({
               staleResponseFilterOptions={staleResponseFilterOptions}
               onSelectPointFilter={onSelectPointFilter}
               onSelectStaleResponseFilter={onSelectStaleResponseFilter}
+              onSelectApprovalFilter={onSelectApprovalFilter}
               onSelectPrioridadFilter={onSelectPrioridadFilter}
               onSelectCategoriaFilter={onSelectCategoriaFilter}
             />
@@ -219,6 +225,7 @@ export function DESValidationDetailPanel({
             evidenceCount={points.filter((point) => (point.evidencias_count ?? 0) > 0).length}
             selectedPointFilter={selectedPointFilter}
             selectedStaleResponseFilter={selectedStaleResponseFilter}
+            selectedApprovalFilter={selectedApprovalFilter}
             selectedPrioridadFilter={selectedPrioridadFilter}
             selectedCategoriaFilter={selectedCategoriaFilter}
             priorityFilterOptions={priorityFilterOptions}
@@ -226,6 +233,7 @@ export function DESValidationDetailPanel({
             staleResponseFilterOptions={staleResponseFilterOptions}
             onSelectPointFilter={onSelectPointFilter}
             onSelectStaleResponseFilter={onSelectStaleResponseFilter}
+            onSelectApprovalFilter={onSelectApprovalFilter}
             onSelectPrioridadFilter={onSelectPrioridadFilter}
             onSelectCategoriaFilter={onSelectCategoriaFilter}
           />
@@ -388,6 +396,7 @@ function PointFiltersRow({
   evidenceCount,
   selectedPointFilter,
   selectedStaleResponseFilter,
+  selectedApprovalFilter,
   selectedPrioridadFilter,
   selectedCategoriaFilter,
   priorityFilterOptions,
@@ -395,6 +404,7 @@ function PointFiltersRow({
   staleResponseFilterOptions,
   onSelectPointFilter,
   onSelectStaleResponseFilter,
+  onSelectApprovalFilter,
   onSelectPrioridadFilter,
   onSelectCategoriaFilter,
 }: {
@@ -402,6 +412,7 @@ function PointFiltersRow({
   evidenceCount: number
   selectedPointFilter: "all" | "evidence:with"
   selectedStaleResponseFilter: string
+  selectedApprovalFilter: string
   selectedPrioridadFilter: string
   selectedCategoriaFilter: string
   priorityFilterOptions: Array<{ key: string; label: string; count: number }>
@@ -409,6 +420,7 @@ function PointFiltersRow({
   staleResponseFilterOptions: Array<{ key: string; label: string; count: number }>
   onSelectPointFilter: (value: "all" | "evidence:with") => void
   onSelectStaleResponseFilter: (value: string) => void
+  onSelectApprovalFilter: (value: string) => void
   onSelectPrioridadFilter: (value: string) => void
   onSelectCategoriaFilter: (value: string) => void
 }) {
@@ -422,6 +434,7 @@ function PointFiltersRow({
         onClick={() => {
           onSelectPointFilter("all")
           onSelectStaleResponseFilter("all")
+          onSelectApprovalFilter("all")
           onSelectPrioridadFilter("all")
           onSelectCategoriaFilter("all")
         }}
@@ -443,6 +456,15 @@ function PointFiltersRow({
             {option.label} ({option.count})
           </option>
         ))}
+      </select>
+      <select
+        value={selectedApprovalFilter}
+        onChange={(event) => onSelectApprovalFilter(event.target.value)}
+        className="h-10 min-w-[144px] rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
+      >
+        <option value="all">Validación</option>
+        <option value="approved">Aprobados</option>
+        <option value="rejected">Rechazados</option>
       </select>
       <select
         value={selectedPrioridadFilter}
@@ -496,11 +518,10 @@ function PointSwitcher({
           key={point.id}
           type="button"
           onClick={() => onSelectPoint(point.id)}
-          className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
-            point.id === activePointId
-              ? "border-[#cfaeb7] bg-[#fbf6f7] text-[#5f1024]"
-              : "border-[#ddd9de] bg-white text-[#5f5f67] hover:border-[#c9bcc2] hover:bg-[#fcf9fa]"
-          }`}
+          className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${resolvePointSwitcherTone(
+            point,
+            point.id === activePointId,
+          )}`}
         >
           {point.numero_punto}
         </button>
@@ -517,6 +538,24 @@ function formatDate(value: string) {
   }).format(new Date(value))
 }
 
+function resolvePointSwitcherTone(point: DESValidationQueueItem, isActive: boolean) {
+  if (point.estado_punto_clave === "validado") {
+    return isActive
+      ? "border-[#5d9b79] bg-[#dff0e6] text-[#1f5b3d] shadow-sm"
+      : "border-[#86b79a] bg-[#edf8f1] text-[#1f5b3d] hover:border-[#5d9b79] hover:bg-[#e0f2e7]"
+  }
+
+  if (point.estado_punto_clave === "rechazado") {
+    return isActive
+      ? "border-[#d8a7b5] bg-[#fbebef] text-[#8f1d35] shadow-sm"
+      : "border-[#ecd1d8] bg-[#fff8fa] text-[#8f1d35] hover:border-[#d8a7b5] hover:bg-[#fbebef]"
+  }
+
+  return isActive
+    ? "border-[#cfaeb7] bg-[#fbf6f7] text-[#5f1024]"
+    : "border-[#ddd9de] bg-white text-[#5f5f67] hover:border-[#c9bcc2] hover:bg-[#fcf9fa]"
+}
+
 type DetailMetaTone = "urgent" | "high" | "medium" | "low" | "category" | "date"
 
 function DetailMetaBadge({
@@ -531,7 +570,7 @@ function DetailMetaBadge({
     high: "border-[#efd7b6] bg-[#fbf1df] text-[#8c5a08]",
     medium: "border-[#ead9ef] bg-[#f6eef8] text-[#7a3f8f]",
     low: "border-[#d8dee6] bg-[#f2f4f7] text-[#55606d]",
-    category: "border-[#d5e7dc] bg-[#edf6f1] text-[#2f6b4f]",
+    category: "border-[#cfe0ee] bg-[#eef5fb] text-[#345b7a]",
     date: "border-[#e1dde3] bg-[#f8f6f9] text-[#5f1024]",
   }[tone]
 

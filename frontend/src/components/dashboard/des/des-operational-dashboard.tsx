@@ -34,6 +34,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
   const [puntosPliegoActual, setPuntosPliegoActual] = useState<DESValidationQueueItem[]>([])
   const [selectedPointFilter, setSelectedPointFilter] = useState<"all" | "evidence:with">("all")
   const [selectedStaleResponseFilter, setSelectedStaleResponseFilter] = useState("all")
+  const [selectedApprovalFilter, setSelectedApprovalFilter] = useState("all")
   const [selectedPrioridadFilter, setSelectedPrioridadFilter] = useState("all")
   const [selectedCategoriaFilter, setSelectedCategoriaFilter] = useState("all")
   const [selectedUnidadId, setSelectedUnidadId] = useState<string>("")
@@ -276,6 +277,14 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
       )
     }
 
+    if (selectedApprovalFilter !== "all") {
+      items = items.filter((item) =>
+        selectedApprovalFilter === "approved"
+          ? item.estado_punto_clave === "validado"
+          : item.estado_punto_clave === "rechazado",
+      )
+    }
+
     if (selectedCategoriaFilter !== "all") {
       items = items.filter(
         (item) => item.categoria_nombre === selectedCategoriaFilter.replace("category:", ""),
@@ -283,7 +292,13 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
     }
 
     return items
-  }, [puntosDelPliego, selectedCategoriaFilter, selectedPointFilter, selectedPrioridadFilter])
+  }, [
+    puntosDelPliego,
+    selectedApprovalFilter,
+    selectedCategoriaFilter,
+    selectedPointFilter,
+    selectedPrioridadFilter,
+  ])
 
   const staleResponseFilterOptions = useMemo(() => {
     return STALE_RESPONSE_FILTER_OPTIONS.map((option) => ({
@@ -316,6 +331,14 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
       )
     }
 
+    if (selectedApprovalFilter !== "all") {
+      items = items.filter((item) =>
+        selectedApprovalFilter === "approved"
+          ? item.estado_punto_clave === "validado"
+          : item.estado_punto_clave === "rechazado",
+      )
+    }
+
     if (selectedCategoriaFilter !== "all") {
       items = items.filter(
         (item) => item.categoria_nombre === selectedCategoriaFilter.replace("category:", ""),
@@ -325,6 +348,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
     return items
   }, [
     puntosDelPliego,
+    selectedApprovalFilter,
     selectedCategoriaFilter,
     selectedPointFilter,
     selectedPrioridadFilter,
@@ -358,6 +382,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
                 setSelectedPointId(null)
                 setSelectedPointFilter("all")
                 setSelectedStaleResponseFilter("all")
+                setSelectedApprovalFilter("all")
                 setSelectedPrioridadFilter("all")
                 setSelectedCategoriaFilter("all")
               }}
@@ -407,6 +432,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
                         setSelectedPointId(null)
                         setSelectedPointFilter("all")
                         setSelectedStaleResponseFilter("all")
+                        setSelectedApprovalFilter("all")
                         setSelectedPrioridadFilter("all")
                         setSelectedCategoriaFilter("all")
                       }}
@@ -439,6 +465,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
           item={selectedItem}
           selectedPointFilter={selectedPointFilter}
           selectedStaleResponseFilter={selectedStaleResponseFilter}
+          selectedApprovalFilter={selectedApprovalFilter}
           selectedPrioridadFilter={selectedPrioridadFilter}
           selectedCategoriaFilter={selectedCategoriaFilter}
           priorityFilterOptions={priorityFilterOptions}
@@ -449,6 +476,7 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
             setSelectedPointFilter(value)
             if (value === "all") {
               setSelectedStaleResponseFilter("all")
+              setSelectedApprovalFilter("all")
               setSelectedPrioridadFilter("all")
               setSelectedCategoriaFilter("all")
             }
@@ -456,6 +484,10 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
           }}
           onSelectStaleResponseFilter={(value) => {
             setSelectedStaleResponseFilter(value)
+            setSelectedPointId(null)
+          }}
+          onSelectApprovalFilter={(value) => {
+            setSelectedApprovalFilter(value)
             setSelectedPointId(null)
           }}
           onSelectPrioridadFilter={(value) => {
