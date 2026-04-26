@@ -1,6 +1,6 @@
 "use client"
 
-import { LoaderCircle, Paperclip } from "lucide-react"
+import { LoaderCircle, Paperclip, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -30,6 +30,12 @@ type UploadFormState = {
   descripcion: string
 }
 
+type EvidenceEditFormState = {
+  tipo_evidencia_id: string
+  titulo: string
+  descripcion: string
+}
+
 const initialUploadForm: UploadFormState = {
   tipo_evidencia_id: "",
   titulo: "",
@@ -48,6 +54,10 @@ export function PointAttentionDialog({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [editingEvidenceId, setEditingEvidenceId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<EvidenceEditFormState | null>(null)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<number | null>(null)
 
   const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen)
@@ -55,6 +65,8 @@ export function PointAttentionDialog({
     if (!nextOpen) {
       setUploadForm(initialUploadForm)
       setSelectedFile(null)
+      setEditingEvidenceId(null)
+      setEditForm(null)
       return
     }
 
@@ -156,7 +168,7 @@ export function PointAttentionDialog({
       }))
       await refreshEvidencias()
       await onSaved()
-      toast.success("Evidencia registrada correctamente.")
+      toast.success(payload.message ?? "Evidencia registrada correctamente.")
     } catch (error) {
       const message =
         error instanceof Error
@@ -165,6 +177,93 @@ export function PointAttentionDialog({
       toast.error(message)
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const startEditingEvidence = (item: PuntoEvidenciaItem) => {
+    setEditingEvidenceId(item.id)
+    setEditForm({
+      tipo_evidencia_id: String(item.tipo_evidencia_id),
+      titulo: item.titulo ?? "",
+      descripcion: item.descripcion ?? "",
+    })
+  }
+
+  const cancelEditingEvidence = () => {
+    setEditingEvidenceId(null)
+    setEditForm(null)
+  }
+
+  const handleSaveEvidenceEdit = async (evidenciaId: number) => {
+    if (!editForm || editForm.tipo_evidencia_id.trim() === "") {
+      toast.error("Selecciona el tipo de evidencia.")
+      return
+    }
+
+    setIsSavingEdit(true)
+    try {
+      const response = await fetch(
+        `/api/unidad/pliegos/${pliegoId}/puntos/${punto.id}/evidencias/${evidenciaId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tipo_evidencia_id: Number(editForm.tipo_evidencia_id),
+            titulo: editForm.titulo.trim() === "" ? null : editForm.titulo.trim(),
+            descripcion: editForm.descripcion.trim() === "" ? null : editForm.descripcion.trim(),
+          }),
+        },
+      )
+      const payload = await response.json()
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "No fue posible actualizar la evidencia.")
+        return
+      }
+
+      await refreshEvidencias()
+      await onSaved()
+      cancelEditingEvidence()
+      toast.success(payload.message ?? "Evidencia actualizada correctamente.")
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No fue posible conectar con el backend."
+      toast.error(message)
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
+  const handleDeleteEvidence = async (evidenciaId: number) => {
+    setDeletingEvidenceId(evidenciaId)
+    try {
+      const response = await fetch(
+        `/api/unidad/pliegos/${pliegoId}/puntos/${punto.id}/evidencias/${evidenciaId}`,
+        {
+          method: "DELETE",
+        },
+      )
+      const payload = await response.json()
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "No fue posible eliminar la evidencia.")
+        return
+      }
+
+      await refreshEvidencias()
+      await onSaved()
+      if (editingEvidenceId === evidenciaId) {
+        cancelEditingEvidence()
+      }
+      toast.success(payload.message ?? "Evidencia eliminada correctamente.")
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No fue posible conectar con el backend."
+      toast.error(message)
+    } finally {
+      setDeletingEvidenceId(null)
     }
   }
 
@@ -236,15 +335,104 @@ export function PointAttentionDialog({
                         </span>
                       </div>
 
-                      {item.descripcion ? (
-                        <p className="mt-2 text-sm leading-7 text-[#67676f]">
-                          {item.descripcion}
-                        </p>
-                      ) : null}
+                      {editingEvidenceId === item.id && editForm ? (
+                        <div className="mt-3 space-y-3">
+                          <SelectField
+                            id={`editar-tipo-evidencia-${item.id}`}
+                            label="Tipo de evidencia"
+                            value={editForm.tipo_evidencia_id}
+                            onChange={(value) =>
+                              setEditForm((current) =>
+                                current ? { ...current, tipo_evidencia_id: value } : current,
+                              )
+                            }
+                            options={tiposEvidencia.map((option) => ({
+                              value: String(option.id),
+                              label: option.nombre,
+                            }))}
+                          />
+                          <Field
+                            id={`editar-titulo-evidencia-${item.id}`}
+                            label="Título"
+                            value={editForm.titulo}
+                            onChange={(value) =>
+                              setEditForm((current) =>
+                                current ? { ...current, titulo: value } : current,
+                              )
+                            }
+                            placeholder="Título de la evidencia"
+                          />
+                          <TextAreaField
+                            id={`editar-descripcion-evidencia-${item.id}`}
+                            label="Descripción"
+                            value={editForm.descripcion}
+                            onChange={(value) =>
+                              setEditForm((current) =>
+                                current ? { ...current, descripcion: value } : current,
+                              )
+                            }
+                            placeholder="Describe brevemente qué demuestra el archivo."
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              disabled={isSavingEdit}
+                              onClick={() => void handleSaveEvidenceEdit(item.id)}
+                              className="h-9 rounded-full bg-[#2f6b4f] px-4 text-white hover:bg-[#285b43]"
+                            >
+                              {isSavingEdit ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                              Guardar cambios
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={isSavingEdit}
+                              onClick={cancelEditingEvidence}
+                              className="h-9 rounded-full border-[#d6d0d6] px-4 text-[#5d5d65]"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {item.descripcion ? (
+                            <p className="mt-2 text-sm leading-7 text-[#67676f]">
+                              {item.descripcion}
+                            </p>
+                          ) : null}
 
-                      <p className="mt-3 text-xs text-[#8b8b92]">
-                        Archivo: {item.archivo.nombre_original} · {formatFileSize(item.archivo.tamano_bytes)}
-                      </p>
+                          <p className="mt-3 text-xs text-[#8b8b92]">
+                            Archivo: {item.archivo.nombre_original} · {formatFileSize(item.archivo.tamano_bytes)}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => startEditingEvidence(item)}
+                              className="h-9 rounded-full border-[#d6d0d6] px-3 text-[#5d5d65] hover:border-[#5f1024] hover:text-[#5f1024]"
+                            >
+                              <Pencil className="size-4" />
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={deletingEvidenceId === item.id}
+                              onClick={() => void handleDeleteEvidence(item.id)}
+                              className="h-9 rounded-full border-[#ead5db] px-3 text-[#7a1730] hover:border-[#7a1730] hover:bg-[#fbf5f7]"
+                            >
+                              {deletingEvidenceId === item.id ? (
+                                <LoaderCircle className="size-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="size-4" />
+                              )}
+                              Quitar
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

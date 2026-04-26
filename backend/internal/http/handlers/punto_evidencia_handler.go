@@ -123,7 +123,7 @@ func (h *PuntoEvidenciaHandler) Upload(c *gin.Context) {
 	}
 
 	usuarioID := claims.UserID
-	archivo, err := h.archivoRepo.Create(
+	archivo, reusedExistingFile, err := h.archivoRepo.Create(
 		c.Request.Context(),
 		savedFile.NombreOriginal,
 		savedFile.NombreStorage,
@@ -135,8 +135,11 @@ func (h *PuntoEvidenciaHandler) Upload(c *gin.Context) {
 		&usuarioID,
 	)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "error registrando archivo")
+		response.Error(c, http.StatusInternalServerError, "error registrando archivo en la base de datos")
 		return
+	}
+	if reusedExistingFile && savedFile.RutaStorage != "" {
+		_ = os.Remove(savedFile.RutaStorage)
 	}
 
 	item, err := h.evidenciaRepo.CreateByUnidadID(
@@ -163,6 +166,12 @@ func (h *PuntoEvidenciaHandler) Upload(c *gin.Context) {
 
 	response.Created(c, gin.H{
 		"item": item,
+		"message": func() string {
+			if reusedExistingFile {
+				return "El archivo ya existía y se reutilizó correctamente."
+			}
+			return "Evidencia registrada correctamente."
+		}(),
 	})
 }
 
@@ -195,6 +204,100 @@ func (h *PuntoEvidenciaHandler) DownloadAdmin(c *gin.Context) {
 	}
 
 	c.FileAttachment(item.Archivo.RutaStorage, item.Archivo.NombreOriginal)
+}
+
+func (h *PuntoEvidenciaHandler) UpdateByUnidadID(c *gin.Context) {
+	unidadID, ok := currentUnidadIDFromClaims(c)
+	if !ok {
+		return
+	}
+
+	evidenciaIDValue := strings.TrimSpace(c.Param("evidencia_id"))
+	evidenciaID, err := strconv.ParseInt(evidenciaIDValue, 10, 64)
+	if err != nil || evidenciaID <= 0 {
+		response.Error(c, http.StatusBadRequest, "evidencia_id inválido")
+		return
+	}
+
+	var body struct {
+		TipoEvidenciaID int64   `json:"tipo_evidencia_id"`
+		Titulo          *string `json:"titulo"`
+		Descripcion     *string `json:"descripcion"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		response.Error(c, http.StatusBadRequest, "payload inválido")
+		return
+	}
+
+	if body.TipoEvidenciaID <= 0 {
+		response.Error(c, http.StatusBadRequest, "tipo_evidencia_id inválido")
+		return
+	}
+
+	var titulo *string
+	if body.Titulo != nil {
+		value := strings.TrimSpace(*body.Titulo)
+		if value != "" {
+			titulo = &value
+		}
+	}
+
+	var descripcion *string
+	if body.Descripcion != nil {
+		value := strings.TrimSpace(*body.Descripcion)
+		if value != "" {
+			descripcion = &value
+		}
+	}
+
+	item, err := h.evidenciaRepo.UpdateByUnidadID(
+		c.Request.Context(),
+		unidadID,
+		evidenciaID,
+		body.TipoEvidenciaID,
+		titulo,
+		descripcion,
+	)
+	if err != nil {
+		if errors.Is(err, repository.ErrPuntoEvidenciaNotFound) {
+			response.Error(c, http.StatusNotFound, "evidencia no encontrada")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "error actualizando evidencia")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"item":    item,
+		"message": "Evidencia actualizada correctamente.",
+	})
+}
+
+func (h *PuntoEvidenciaHandler) DeleteByUnidadID(c *gin.Context) {
+	unidadID, ok := currentUnidadIDFromClaims(c)
+	if !ok {
+		return
+	}
+
+	evidenciaIDValue := strings.TrimSpace(c.Param("evidencia_id"))
+	evidenciaID, err := strconv.ParseInt(evidenciaIDValue, 10, 64)
+	if err != nil || evidenciaID <= 0 {
+		response.Error(c, http.StatusBadRequest, "evidencia_id inválido")
+		return
+	}
+
+	if err := h.evidenciaRepo.DeleteByUnidadID(c.Request.Context(), unidadID, evidenciaID); err != nil {
+		if errors.Is(err, repository.ErrPuntoEvidenciaNotFound) {
+			response.Error(c, http.StatusNotFound, "evidencia no encontrada")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "error eliminando evidencia")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"message": "Evidencia eliminada correctamente.",
+	})
 }
 
 func parseBoolForm(value string) bool {

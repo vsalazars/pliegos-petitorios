@@ -12,17 +12,28 @@ import {
   type DESValidationQueueItem,
 } from "@/lib/des-dashboard"
 
+const STALE_RESPONSE_FILTER_OPTIONS = [
+  { key: "all", label: "Sin atención de la unidad" },
+  { key: "no-response:7-14", label: "7 a 14 días", minDays: 7, maxDays: 14 },
+  { key: "no-response:15-29", label: "15 a 29 días", minDays: 15, maxDays: 29 },
+  { key: "no-response:30-89", label: "1 a 2 meses", minDays: 30, maxDays: 89 },
+  { key: "no-response:90-179", label: "3 a 5 meses", minDays: 90, maxDays: 179 },
+  { key: "no-response:180+", label: "6+ meses", minDays: 180 },
+] as const
+
 type DESOperationalDashboardProps = {
   dashboard: DESDashboardOperationalData
 }
 
-export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardProps) {
+export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationalDashboardProps) {
+  void _dashboard
   const [search, setSearch] = useState("")
   const [unidades, setUnidades] = useState<DESUnidad[]>([])
   const [pliegos, setPliegos] = useState<DESPliegoItem[]>([])
   const [puntos, setPuntos] = useState<DESValidationQueueItem[]>([])
   const [puntosPliegoActual, setPuntosPliegoActual] = useState<DESValidationQueueItem[]>([])
   const [selectedPointFilter, setSelectedPointFilter] = useState<"all" | "evidence:with">("all")
+  const [selectedStaleResponseFilter, setSelectedStaleResponseFilter] = useState("all")
   const [selectedPrioridadFilter, setSelectedPrioridadFilter] = useState("all")
   const [selectedCategoriaFilter, setSelectedCategoriaFilter] = useState("all")
   const [selectedUnidadId, setSelectedUnidadId] = useState<string>("")
@@ -252,7 +263,7 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
     )
   }, [puntosDelPliego])
 
-  const puntosFiltrados = useMemo(() => {
+  const puntosBaseParaConteosAntiguedad = useMemo(() => {
     let items = puntosDelPliego
 
     if (selectedPointFilter === "evidence:with") {
@@ -274,6 +285,52 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
     return items
   }, [puntosDelPliego, selectedCategoriaFilter, selectedPointFilter, selectedPrioridadFilter])
 
+  const staleResponseFilterOptions = useMemo(() => {
+    return STALE_RESPONSE_FILTER_OPTIONS.map((option) => ({
+      key: option.key,
+      label: option.label,
+      count:
+        option.key === "all"
+          ? puntosBaseParaConteosAntiguedad.filter((item) => getPendingResponseDays(item) !== null)
+              .length
+          : puntosBaseParaConteosAntiguedad.filter((item) =>
+              matchesStaleResponseFilter(item, option.key),
+            ).length,
+    }))
+  }, [puntosBaseParaConteosAntiguedad])
+
+  const puntosFiltrados = useMemo(() => {
+    let items = puntosDelPliego
+
+    if (selectedPointFilter === "evidence:with") {
+      items = items.filter((item) => (item.evidencias_count ?? 0) > 0)
+    }
+
+    if (selectedStaleResponseFilter !== "all") {
+      items = items.filter((item) => matchesStaleResponseFilter(item, selectedStaleResponseFilter))
+    }
+
+    if (selectedPrioridadFilter !== "all") {
+      items = items.filter(
+        (item) => item.prioridad_clave === selectedPrioridadFilter.replace("priority:", ""),
+      )
+    }
+
+    if (selectedCategoriaFilter !== "all") {
+      items = items.filter(
+        (item) => item.categoria_nombre === selectedCategoriaFilter.replace("category:", ""),
+      )
+    }
+
+    return items
+  }, [
+    puntosDelPliego,
+    selectedCategoriaFilter,
+    selectedPointFilter,
+    selectedPrioridadFilter,
+    selectedStaleResponseFilter,
+  ])
+
   const activePointId =
     selectedPointId && puntosFiltrados.some((item) => item.id === selectedPointId)
       ? selectedPointId
@@ -284,29 +341,6 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
 
   return (
     <div className="flex h-[calc(100vh-14rem)] min-h-[640px] flex-col gap-4 overflow-hidden">
-      <section className="flex shrink-0 flex-wrap gap-2.5">
-        <MetricBadge
-          label="Pendientes de validación"
-          value={dashboard.atencion_inmediata.pendientes_validacion}
-          tone="solid"
-        />
-        <MetricBadge
-          label="Con observación DES"
-          value={dashboard.atencion_inmediata.con_observacion_des}
-          tone="rose"
-        />
-        <MetricBadge
-          label="Pendientes operativos"
-          value={dashboard.atencion_inmediata.puntos_pendientes_operativos}
-          tone="slate"
-        />
-        <MetricBadge
-          label="Casos críticos"
-          value={dashboard.atencion_inmediata.casos_criticos_resumen.total}
-          tone="green"
-        />
-      </section>
-
       <section className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[0.72fr_1.28fr]">
         <Card className="flex h-full min-h-0 flex-col rounded-[1.8rem] border-[#ddd8de] py-0">
           <CardHeader className="px-6 pt-6">
@@ -323,6 +357,7 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
                 setSelectedPliegoId(null)
                 setSelectedPointId(null)
                 setSelectedPointFilter("all")
+                setSelectedStaleResponseFilter("all")
                 setSelectedPrioridadFilter("all")
                 setSelectedCategoriaFilter("all")
               }}
@@ -371,6 +406,7 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
                         setSelectedPliegoId(pliego.id)
                         setSelectedPointId(null)
                         setSelectedPointFilter("all")
+                        setSelectedStaleResponseFilter("all")
                         setSelectedPrioridadFilter("all")
                         setSelectedCategoriaFilter("all")
                       }}
@@ -402,17 +438,24 @@ export function DESOperationalDashboard({ dashboard }: DESOperationalDashboardPr
           points={puntosFiltrados}
           item={selectedItem}
           selectedPointFilter={selectedPointFilter}
+          selectedStaleResponseFilter={selectedStaleResponseFilter}
           selectedPrioridadFilter={selectedPrioridadFilter}
           selectedCategoriaFilter={selectedCategoriaFilter}
           priorityFilterOptions={priorityFilterOptions}
           categoryFilterOptions={categoryFilterOptions}
+          staleResponseFilterOptions={staleResponseFilterOptions}
           onSelectPoint={setSelectedPointId}
           onSelectPointFilter={(value) => {
             setSelectedPointFilter(value)
             if (value === "all") {
+              setSelectedStaleResponseFilter("all")
               setSelectedPrioridadFilter("all")
               setSelectedCategoriaFilter("all")
             }
+            setSelectedPointId(null)
+          }}
+          onSelectStaleResponseFilter={(value) => {
+            setSelectedStaleResponseFilter(value)
             setSelectedPointId(null)
           }}
           onSelectPrioridadFilter={(value) => {
@@ -439,32 +482,6 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-function MetricBadge({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: "solid" | "slate" | "green" | "rose"
-}) {
-  const toneClassName = {
-    solid: "border-[#5f1024] bg-[#5f1024] text-white",
-    slate: "border-[#d9e0e7] bg-[#f2f4f7] text-[#55606d]",
-    green: "border-[#d5e7dc] bg-[#edf6f1] text-[#2f6b4f]",
-    rose: "border-[#ead5db] bg-[#f8ebef] text-[#7a1730]",
-  }[tone]
-
-  return (
-    <div
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${toneClassName}`}
-    >
-      <span className="opacity-85">{label}</span>
-      <span className="font-heading text-xl leading-none">{value}</span>
-    </div>
-  )
-}
-
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-MX", {
     day: "2-digit",
@@ -476,4 +493,69 @@ function formatDate(value: string) {
 async function readJsonSafely(response: Response) {
   const raw = await response.text()
   return raw.trim() === "" ? {} : JSON.parse(raw)
+}
+
+function getPendingResponseDays(item: DESValidationQueueItem) {
+  if (!shouldCountPendingUnitResponse(item)) {
+    return null
+  }
+
+  const referenceDate = item.fecha_registro
+  const referenceTime = new Date(referenceDate).getTime()
+
+  if (Number.isNaN(referenceTime)) {
+    return null
+  }
+
+  const millisecondsPerDay = 1000 * 60 * 60 * 24
+  return Math.floor((Date.now() - referenceTime) / millisecondsPerDay)
+}
+
+function matchesStaleResponseFilter(item: DESValidationQueueItem, filterKey: string) {
+  if (filterKey === "all") {
+    return true
+  }
+
+  const pendingDays = getPendingResponseDays(item)
+  if (pendingDays === null) {
+    return false
+  }
+
+  const option = STALE_RESPONSE_FILTER_OPTIONS.find((current) => current.key === filterKey)
+  if (!option || option.minDays === undefined) {
+    return false
+  }
+
+  if (pendingDays < option.minDays) {
+    return false
+  }
+
+  if ("maxDays" in option && option.maxDays !== undefined && pendingDays > option.maxDays) {
+    return false
+  }
+
+  return true
+}
+
+function shouldCountPendingUnitResponse(item: DESValidationQueueItem) {
+  if (item.estado_punto_clave !== "requiere_informacion") {
+    return false
+  }
+
+  if (!item.fecha_validacion_des) {
+    return false
+  }
+
+  if (!item.fecha_respuesta_unidad) {
+    return true
+  }
+
+  const validationTime = new Date(item.fecha_validacion_des).getTime()
+  const unitResponseTime = new Date(item.fecha_respuesta_unidad).getTime()
+
+  if (Number.isNaN(validationTime) || Number.isNaN(unitResponseTime)) {
+    return false
+  }
+
+  return unitResponseTime < validationTime
 }

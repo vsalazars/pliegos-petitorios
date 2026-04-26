@@ -1,15 +1,15 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
-import { DESMetricCard } from "@/components/dashboard/des/des-metric-card"
 import { DESOperationalDashboard } from "@/components/dashboard/des/des-operational-dashboard"
 import { DESUserCreateForm } from "@/components/dashboard/des/des-user-create-form"
 import { DESUserList } from "@/components/dashboard/des/des-user-list"
 import { DashboardShell } from "@/components/dashboard/shared/dashboard-shell"
 import { DashboardState } from "@/components/dashboard/shared/dashboard-state"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { AuthUser } from "@/lib/auth"
-import { isUnidadRole, type DESRole, type DESUnidad, type DESUser } from "@/lib/des-admin"
+import { type DESAccountScope, type DESRole, type DESUnidad, type DESUser } from "@/lib/des-admin"
 import type { DESDashboardOperationalData } from "@/lib/des-dashboard"
 
 type DESAdminResponse = {
@@ -27,6 +27,7 @@ export function DESDashboardPage() {
   const [operationalData, setOperationalData] = useState<DESDashboardOperationalData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [accountScope, setAccountScope] = useState<DESAccountScope>("UNIDAD")
 
   const load = async () => {
     try {
@@ -172,19 +173,6 @@ export function DESDashboardPage() {
     }
   }, [])
 
-  const metrics = useMemo(() => {
-    const unidades = data?.unidades ?? []
-    const users = data?.usuarios ?? []
-    const unidadUsers = users.filter((item) => isUnidadRole(item.rol_clave))
-
-    return {
-      totalUnidades: unidades.filter((item) => item.activo).length,
-      cuentasUnidad: unidadUsers.length,
-      cuentasActivas: unidadUsers.filter((item) => item.activo).length,
-      pendientesCambioPassword: unidadUsers.filter((item) => item.debe_cambiar_password).length,
-    }
-  }, [data])
-
   if (isLoading) {
     return (
       <DashboardShell
@@ -232,40 +220,81 @@ export function DESDashboardPage() {
     return null
   }
 
-  const unidadUsers = data.usuarios
-    .filter((item) => isUnidadRole(item.rol_clave))
-    .sort(
-      (left, right) =>
-        new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
-    )
+  const users = [...data.usuarios].sort(
+    (left, right) =>
+      new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+  )
 
   return (
     <DashboardShell
-      badge="DES"
-      title="Administración DES"
+      badge="Dirección de Educación Superior"
+      title="Administración de cuentas de acceso"
       subtitle="Alta rápida de cuentas para unidades académicas y revisión del acceso ya asignado."
     >
       <div className="space-y-6">
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DESMetricCard label="Unidades activas" value={metrics.totalUnidades} tone="solid" />
-          <DESMetricCard label="Cuentas de unidad" value={metrics.cuentasUnidad} tone="slate" />
-          <DESMetricCard label="Cuentas activas" value={metrics.cuentasActivas} tone="green" />
-          <DESMetricCard
-            label="Cambio de password pendiente"
-            value={metrics.pendientesCambioPassword}
-            tone="rose"
-          />
-        </section>
+        <Tabs
+          value={accountScope}
+          onValueChange={(value) => setAccountScope(value as DESAccountScope)}
+          className="space-y-6"
+        >
+          <TabsList
+            variant="line"
+            className="rounded-full bg-[#f7f1f3] p-1 text-[#7a7a81]"
+          >
+            <TabsTrigger
+              value="UNIDAD"
+              className="rounded-full px-4 py-2 data-active:bg-white data-active:text-[#5f1024]"
+            >
+              Cuentas de unidad
+            </TabsTrigger>
+            <TabsTrigger
+              value="DES"
+              className="rounded-full px-4 py-2 data-active:bg-white data-active:text-[#5f1024]"
+            >
+              Cuentas DES
+            </TabsTrigger>
+          </TabsList>
 
-        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <DESUserCreateForm
-            unidades={data.unidades}
-            roles={data.roles}
-            disabled={data.user.rol_clave !== "SUPERADMIN_DES"}
-            onCreated={load}
-          />
-          <DESUserList users={unidadUsers.slice(0, 8)} />
-        </section>
+          <TabsContent value="UNIDAD">
+            <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              <DESUserCreateForm
+                unidades={data.unidades}
+                roles={data.roles}
+                scope="UNIDAD"
+                disabled={data.user.rol_clave !== "SUPERADMIN_DES"}
+                onCreated={load}
+              />
+              <DESUserList
+                users={users}
+                unidades={data.unidades}
+                roles={data.roles}
+                scope="UNIDAD"
+                disabled={data.user.rol_clave !== "SUPERADMIN_DES"}
+                onSaved={load}
+              />
+            </section>
+          </TabsContent>
+
+          <TabsContent value="DES">
+            <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+              <DESUserCreateForm
+                unidades={data.unidades}
+                roles={data.roles}
+                scope="DES"
+                disabled={data.user.rol_clave !== "SUPERADMIN_DES"}
+                onCreated={load}
+              />
+              <DESUserList
+                users={users}
+                unidades={data.unidades}
+                roles={data.roles}
+                scope="DES"
+                disabled={data.user.rol_clave !== "SUPERADMIN_DES"}
+                onSaved={load}
+              />
+            </section>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardShell>
   )

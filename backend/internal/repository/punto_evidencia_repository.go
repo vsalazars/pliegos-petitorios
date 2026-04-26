@@ -15,6 +15,8 @@ type PuntoEvidenciaRepository struct {
 	pool *pgxpool.Pool
 }
 
+var ErrPuntoEvidenciaNotFound = fmt.Errorf("evidencia no encontrada")
+
 func NewPuntoEvidenciaRepository(pool *pgxpool.Pool) *PuntoEvidenciaRepository {
 	return &PuntoEvidenciaRepository{pool: pool}
 }
@@ -315,4 +317,76 @@ func (r *PuntoEvidenciaRepository) GetByID(ctx context.Context, id int64) (*doma
 	}
 
 	return &item, nil
+}
+
+func (r *PuntoEvidenciaRepository) UpdateByUnidadID(
+	ctx context.Context,
+	unidadID int64,
+	evidenciaID int64,
+	tipoEvidenciaID int64,
+	titulo *string,
+	descripcion *string,
+) (*domain.PuntoEvidenciaWithDetalle, error) {
+	const query = `
+		UPDATE punto_evidencias pe
+		SET tipo_evidencia_id = $3,
+		    titulo = $4,
+		    descripcion = $5
+		FROM pliego_puntos pp
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		WHERE pe.id = $1
+		  AND pp.id = pe.punto_id
+		  AND p.unidad_id = $2
+		RETURNING pe.id;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var updatedID int64
+	err := r.pool.QueryRow(
+		ctx,
+		query,
+		evidenciaID,
+		unidadID,
+		tipoEvidenciaID,
+		titulo,
+		descripcion,
+	).Scan(&updatedID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, ErrPuntoEvidenciaNotFound
+		}
+		return nil, fmt.Errorf("actualizar evidencia por unidad: %w", err)
+	}
+
+	return r.GetByID(ctx, updatedID)
+}
+
+func (r *PuntoEvidenciaRepository) DeleteByUnidadID(
+	ctx context.Context,
+	unidadID int64,
+	evidenciaID int64,
+) error {
+	const query = `
+		DELETE FROM punto_evidencias pe
+		USING pliego_puntos pp, pliegos p
+		WHERE pe.id = $1
+		  AND pp.id = pe.punto_id
+		  AND p.id = pp.pliego_id
+		  AND p.unidad_id = $2;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	cmdTag, err := r.pool.Exec(ctx, query, evidenciaID, unidadID)
+	if err != nil {
+		return fmt.Errorf("eliminar evidencia por unidad: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return ErrPuntoEvidenciaNotFound
+	}
+
+	return nil
 }

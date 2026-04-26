@@ -1,12 +1,22 @@
 "use client"
 
-import { FileStack, LayoutDashboard, LogOut, Menu, X } from "lucide-react"
+import { FileStack, KeyRound, LayoutDashboard, LoaderCircle, LogOut, Menu, Pencil, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import type { AuthUser } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
@@ -43,11 +53,28 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [unidadNombre, setUnidadNombre] = useState("Unidad Académica")
   const [sessionUser, setSessionUser] = useState<Pick<
     AuthUser,
-    "nombre" | "correo" | "username" | "rol_nombre" | "rol_clave"
+    | "nombre"
+    | "apellido_paterno"
+    | "apellido_materno"
+    | "correo"
+    | "username"
+    | "rol_nombre"
+    | "rol_clave"
   > | null>(null)
+  const [profileForm, setProfileForm] = useState({
+    nombre: "",
+    apellido_paterno: "",
+    apellido_materno: "",
+    correo: "",
+    username: "",
+    password: "",
+    password_confirmation: "",
+  })
 
   const headerCopy = useMemo(() => {
     if (pathname.startsWith("/dashboard/unidad/pliegos/")) {
@@ -73,6 +100,8 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
         setUnidadNombre(payload.user.unidad_nombre)
         setSessionUser({
           nombre: payload.user.nombre,
+          apellido_paterno: payload.user.apellido_paterno,
+          apellido_materno: payload.user.apellido_materno,
           correo: payload.user.correo,
           username: payload.user.username,
           rol_nombre: payload.user.rol_nombre,
@@ -91,6 +120,79 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
     await fetch("/api/auth/logout", { method: "POST" })
     router.push("/")
     router.refresh()
+  }
+
+  const openProfileEditor = () => {
+    if (!sessionUser) {
+      return
+    }
+
+    setProfileForm({
+      nombre: (sessionUser.nombre ?? "").trim() || sessionUser.username,
+      apellido_paterno: sessionUser.apellido_paterno ?? "",
+      apellido_materno: sessionUser.apellido_materno ?? "",
+      correo: sessionUser.correo,
+      username: sessionUser.username,
+      password: "",
+      password_confirmation: "",
+    })
+    setIsProfileOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!sessionUser) {
+      return
+    }
+
+    if (profileForm.password !== profileForm.password_confirmation) {
+      toast.error("La confirmación de contraseña no coincide.")
+      return
+    }
+
+    setIsSavingProfile(true)
+    try {
+      const response = await fetch("/api/unidad/mi-cuenta", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: profileForm.nombre.trim(),
+          apellido_paterno: emptyToNull(profileForm.apellido_paterno),
+          apellido_materno: emptyToNull(profileForm.apellido_materno),
+          correo: profileForm.correo.trim(),
+          username: profileForm.username.trim(),
+          password: profileForm.password.trim() === "" ? null : profileForm.password,
+        }),
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "No fue posible actualizar tus datos.")
+        return
+      }
+
+      setSessionUser({
+        nombre: payload.item.nombre,
+        apellido_paterno: payload.item.apellido_paterno,
+        apellido_materno: payload.item.apellido_materno,
+        correo: payload.item.correo,
+        username: payload.item.username,
+        rol_nombre: payload.item.rol_nombre,
+        rol_clave: payload.item.rol_clave,
+      })
+      setIsProfileOpen(false)
+      setProfileForm((current) => ({
+        ...current,
+        password: "",
+        password_confirmation: "",
+      }))
+      toast.success("Tus datos se actualizaron correctamente.")
+    } catch {
+      toast.error("No fue posible conectar con el backend.")
+    } finally {
+      setIsSavingProfile(false)
+    }
   }
 
   return (
@@ -120,6 +222,7 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
               IPN · Secretaría Académica
             </p>
             <p className="text-xs text-[#8a8a91]">Dirección de Educación Superior</p>
+            <div className="my-3 h-px w-28 rounded-full bg-[#e4dde1]" aria-hidden="true" />
             <p className="text-sm text-[#696971]">{unidadNombre}</p>
           </div>
 
@@ -157,11 +260,21 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
         
         {sessionUser ? (
           <div className="mt-auto rounded-[1.4rem] border border-[#e7e0e4] bg-[#faf7f8] px-4 py-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
-              Sesión activa
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
+                Sesión activa
+              </p>
+              <button
+                type="button"
+                onClick={openProfileEditor}
+                className="inline-flex size-8 items-center justify-center rounded-full border border-[#e1d8dd] bg-white text-[#7a1730] transition hover:border-[#c9b2ba] hover:bg-[#fffdfd]"
+                aria-label="Editar datos de la cuenta"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </div>
             <p className="mt-2 truncate font-medium text-[#4a4a52]">
-              {sessionUser.nombre?.trim() || sessionUser.username}
+              {resolveSessionDisplayName(sessionUser)}
             </p>
             <p className="mt-1 truncate text-sm text-[#6c6c74]">{sessionUser.correo}</p>
             <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-[#7a1730] shadow-sm">
@@ -171,6 +284,157 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
         ) : null}
 
       </aside>
+
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent className="max-w-[calc(100%-2rem)] rounded-[1.75rem] border border-[#e4dde1] bg-white p-0 sm:max-w-2xl">
+          <div className="space-y-6 px-6 py-6">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="font-heading text-3xl tracking-tight text-[#5f1024]">
+                Editar mi cuenta
+              </DialogTitle>
+              <DialogDescription className="text-sm text-[#6b6b73]">
+                Actualiza tus datos de acceso y, si lo necesitas, registra una nueva contraseña.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="profile-nombre">Nombre</Label>
+                <Input
+                  id="profile-nombre"
+                  value={profileForm.nombre}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({ ...current, nombre: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-[#ddd9de]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profile-username">Usuario</Label>
+                <Input
+                  id="profile-username"
+                  value={profileForm.username}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({ ...current, username: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-[#ddd9de]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profile-apellido-paterno">Apellido paterno</Label>
+                <Input
+                  id="profile-apellido-paterno"
+                  value={profileForm.apellido_paterno}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      apellido_paterno: event.target.value,
+                    }))
+                  }
+                  className="h-12 rounded-2xl border-[#ddd9de]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profile-apellido-materno">Apellido materno</Label>
+                <Input
+                  id="profile-apellido-materno"
+                  value={profileForm.apellido_materno}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      apellido_materno: event.target.value,
+                    }))
+                  }
+                  className="h-12 rounded-2xl border-[#ddd9de]"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="profile-correo">Correo institucional</Label>
+                <Input
+                  id="profile-correo"
+                  type="email"
+                  value={profileForm.correo}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({ ...current, correo: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-[#ddd9de]"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-[#ece6e9] bg-[#fbf8f9] px-4 py-4">
+              <div className="flex items-center gap-2 text-[#7a1730]">
+                <KeyRound className="size-4" />
+                <p className="text-sm font-medium">Cambiar contraseña</p>
+              </div>
+              <p className="mt-1 text-sm text-[#73737b]">
+                Déjala vacía si quieres conservar la actual.
+              </p>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-password">Nueva contraseña</Label>
+                  <Input
+                    id="profile-password"
+                    type="password"
+                    value={profileForm.password}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({ ...current, password: event.target.value }))
+                    }
+                    className="h-12 rounded-2xl border-[#ddd9de]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-password-confirmation">Confirmar contraseña</Label>
+                  <Input
+                    id="profile-password-confirmation"
+                    type="password"
+                    value={profileForm.password_confirmation}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        password_confirmation: event.target.value,
+                      }))
+                    }
+                    className="h-12 rounded-2xl border-[#ddd9de]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsProfileOpen(false)}
+                className="h-11 rounded-full border-[#d6d0d6] px-5"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="h-11 rounded-full bg-[#5f1024] px-5 text-white hover:bg-[#741732]"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar cambios"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {isOpen ? (
         <button
@@ -235,4 +499,28 @@ function resolveRoleLabel(rolNombre?: string, rolClave?: string) {
     default:
       return "Unidad académica"
   }
+}
+
+function emptyToNull(value: string) {
+  const trimmed = value.trim()
+  return trimmed === "" ? null : trimmed
+}
+
+function resolveSessionDisplayName(
+  user: Pick<
+    AuthUser,
+    "nombre" | "apellido_paterno" | "apellido_materno" | "username"
+  >,
+) {
+  const parts = [
+    user.nombre?.trim(),
+    user.apellido_paterno?.trim(),
+    user.apellido_materno?.trim(),
+  ].filter((value): value is string => Boolean(value))
+
+  if (parts.length > 0) {
+    return parts.join(" ")
+  }
+
+  return user.username
 }

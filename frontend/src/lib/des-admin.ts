@@ -34,6 +34,8 @@ export type DESUser = {
   created_at: string
 }
 
+export type DESAccountScope = "DES" | "UNIDAD"
+
 export function resolveFullName(user: Pick<
   DESUser,
   "nombre" | "apellido_paterno" | "apellido_materno"
@@ -49,4 +51,24 @@ export function isUnidadRole(rolClave: string) {
     rolClave === "CAPTURISTA_UNIDAD" ||
     rolClave === "CONSULTA_UNIDAD"
   )
+}
+
+export function isDESRole(rolClave: string) {
+  return !isUnidadRole(rolClave)
+}
+
+export function resolveRoleDisplayName(role: Pick<DESRole, "clave" | "nombre">) {
+  if (role.clave === "CONSULTA_DES") {
+    return "Ejecutivo DES"
+  }
+
+  return role.nombre
+}
+
+export function resolveUserRoleDisplayName(user: Pick<DESUser, "rol_clave" | "rol_nombre">) {
+  if (user.rol_clave === "CONSULTA_DES") {
+    return "Ejecutivo DES"
+  }
+
+  return user.rol_nombre
 }

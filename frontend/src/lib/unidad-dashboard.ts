@@ -46,6 +46,13 @@ export type UnidadDashboardData = {
     pliegos_por_revisar: number
     pliegos_con_revision_final: number
     pliegos_cerrados: number
+    puntos_pendientes_operativos: number
+    puntos_con_observacion_des: number
+    puntos_en_validacion_des: number
+    puntos_antiguedad_0_7: number
+    puntos_antiguedad_8_15: number
+    puntos_antiguedad_16_30: number
+    puntos_antiguedad_mas_30: number
   }
   por_estado: Array<{
     clave: string
@@ -59,13 +66,23 @@ export type UnidadDashboardData = {
   }
 }
 
-export function buildUnidadDashboard(items: UnidadPliego[]): UnidadDashboardData {
+export function buildUnidadDashboard(
+  items: UnidadPliego[],
+  puntos: UnidadPliegoPunto[],
+): UnidadDashboardData {
   const resumen = {
     total_pliegos: items.length,
     pliegos_activos: 0,
     pliegos_por_revisar: 0,
     pliegos_con_revision_final: 0,
     pliegos_cerrados: 0,
+    puntos_pendientes_operativos: 0,
+    puntos_con_observacion_des: 0,
+    puntos_en_validacion_des: 0,
+    puntos_antiguedad_0_7: 0,
+    puntos_antiguedad_8_15: 0,
+    puntos_antiguedad_16_30: 0,
+    puntos_antiguedad_mas_30: 0,
   }
 
   const porEstadoMap = new Map<
@@ -120,6 +137,37 @@ export function buildUnidadDashboard(items: UnidadPliego[]): UnidadDashboardData
     return right.total - left.total
   })
 
+  for (const punto of puntos) {
+    if (punto.requiere_validacion) {
+      resumen.puntos_en_validacion_des += 1
+    }
+
+    if (punto.estado_punto_clave === "requiere_informacion") {
+      resumen.puntos_con_observacion_des += 1
+    }
+
+    if (!isPuntoPendienteOperativo(punto.estado_punto_clave)) {
+      continue
+    }
+
+    resumen.puntos_pendientes_operativos += 1
+
+    const diasDesdeRegistro = daysSince(punto.fecha_registro)
+    if (diasDesdeRegistro <= 7) {
+      resumen.puntos_antiguedad_0_7 += 1
+      continue
+    }
+    if (diasDesdeRegistro <= 15) {
+      resumen.puntos_antiguedad_8_15 += 1
+      continue
+    }
+    if (diasDesdeRegistro <= 30) {
+      resumen.puntos_antiguedad_16_30 += 1
+      continue
+    }
+    resumen.puntos_antiguedad_mas_30 += 1
+  }
+
   return {
     resumen,
     por_estado: porEstado,
@@ -129,4 +177,17 @@ export function buildUnidadDashboard(items: UnidadPliego[]): UnidadDashboardData
       sin_revision_final: sinRevisionFinal,
     },
   }
+}
+
+function isPuntoPendienteOperativo(estadoPuntoClave: string) {
+  return (
+    estadoPuntoClave === "detectado" ||
+    estadoPuntoClave === "en_proceso" ||
+    estadoPuntoClave === "requiere_informacion"
+  )
+}
+
+function daysSince(value: string) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
 }

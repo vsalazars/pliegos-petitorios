@@ -19,12 +19,15 @@ type DESValidationDetailPanelProps = {
   points: DESValidationQueueItem[]
   item: DESValidationQueueItem | null
   selectedPointFilter: "all" | "evidence:with"
+  selectedStaleResponseFilter: string
   selectedPrioridadFilter: string
   selectedCategoriaFilter: string
   priorityFilterOptions: Array<{ key: string; label: string; count: number }>
   categoryFilterOptions: Array<{ key: string; label: string; count: number }>
+  staleResponseFilterOptions: Array<{ key: string; label: string; count: number }>
   onSelectPoint: (pointId: number) => void
   onSelectPointFilter: (value: "all" | "evidence:with") => void
+  onSelectStaleResponseFilter: (value: string) => void
   onSelectPrioridadFilter: (value: string) => void
   onSelectCategoriaFilter: (value: string) => void
   onValidated: () => Promise<void> | void
@@ -35,12 +38,15 @@ export function DESValidationDetailPanel({
   points,
   item,
   selectedPointFilter,
+  selectedStaleResponseFilter,
   selectedPrioridadFilter,
   selectedCategoriaFilter,
   priorityFilterOptions,
   categoryFilterOptions,
+  staleResponseFilterOptions,
   onSelectPoint,
   onSelectPointFilter,
+  onSelectStaleResponseFilter,
   onSelectPrioridadFilter,
   onSelectCategoriaFilter,
   onValidated,
@@ -117,7 +123,7 @@ export function DESValidationDetailPanel({
     }
   }, [item])
 
-  const submitValidation = async (resultado: "aprobado" | "requiere_informacion" | "rechazado") => {
+  const submitValidation = async (resultado: "aprobado" | "rechazado") => {
     if (!item) {
       return
     }
@@ -175,11 +181,14 @@ export function DESValidationDetailPanel({
               totalCount={points.length}
               evidenceCount={points.filter((point) => (point.evidencias_count ?? 0) > 0).length}
               selectedPointFilter={selectedPointFilter}
+              selectedStaleResponseFilter={selectedStaleResponseFilter}
               selectedPrioridadFilter={selectedPrioridadFilter}
               selectedCategoriaFilter={selectedCategoriaFilter}
               priorityFilterOptions={priorityFilterOptions}
               categoryFilterOptions={categoryFilterOptions}
+              staleResponseFilterOptions={staleResponseFilterOptions}
               onSelectPointFilter={onSelectPointFilter}
+              onSelectStaleResponseFilter={onSelectStaleResponseFilter}
               onSelectPrioridadFilter={onSelectPrioridadFilter}
               onSelectCategoriaFilter={onSelectCategoriaFilter}
             />
@@ -209,11 +218,14 @@ export function DESValidationDetailPanel({
             totalCount={points.length}
             evidenceCount={points.filter((point) => (point.evidencias_count ?? 0) > 0).length}
             selectedPointFilter={selectedPointFilter}
+            selectedStaleResponseFilter={selectedStaleResponseFilter}
             selectedPrioridadFilter={selectedPrioridadFilter}
             selectedCategoriaFilter={selectedCategoriaFilter}
             priorityFilterOptions={priorityFilterOptions}
             categoryFilterOptions={categoryFilterOptions}
+            staleResponseFilterOptions={staleResponseFilterOptions}
             onSelectPointFilter={onSelectPointFilter}
+            onSelectStaleResponseFilter={onSelectStaleResponseFilter}
             onSelectPrioridadFilter={onSelectPrioridadFilter}
             onSelectCategoriaFilter={onSelectCategoriaFilter}
           />
@@ -320,14 +332,6 @@ export function DESValidationDetailPanel({
             <Button
               type="button"
               disabled={isSubmitting}
-              onClick={() => void submitValidation("requiere_informacion")}
-              className="h-11 rounded-full bg-[#8c5a08] px-4 text-white hover:bg-[#744b07]"
-            >
-              Solicitar información
-            </Button>
-            <Button
-              type="button"
-              disabled={isSubmitting}
               onClick={() => void submitValidation("rechazado")}
               className="h-11 rounded-full bg-[#7a1730] px-4 text-white hover:bg-[#651227]"
             >
@@ -383,27 +387,33 @@ function PointFiltersRow({
   totalCount,
   evidenceCount,
   selectedPointFilter,
+  selectedStaleResponseFilter,
   selectedPrioridadFilter,
   selectedCategoriaFilter,
   priorityFilterOptions,
   categoryFilterOptions,
+  staleResponseFilterOptions,
   onSelectPointFilter,
+  onSelectStaleResponseFilter,
   onSelectPrioridadFilter,
   onSelectCategoriaFilter,
 }: {
   totalCount: number
   evidenceCount: number
   selectedPointFilter: "all" | "evidence:with"
+  selectedStaleResponseFilter: string
   selectedPrioridadFilter: string
   selectedCategoriaFilter: string
   priorityFilterOptions: Array<{ key: string; label: string; count: number }>
   categoryFilterOptions: Array<{ key: string; label: string; count: number }>
+  staleResponseFilterOptions: Array<{ key: string; label: string; count: number }>
   onSelectPointFilter: (value: "all" | "evidence:with") => void
+  onSelectStaleResponseFilter: (value: string) => void
   onSelectPrioridadFilter: (value: string) => void
   onSelectCategoriaFilter: (value: string) => void
 }) {
   return (
-    <div className="grid grid-cols-[auto_auto_minmax(132px,160px)_minmax(132px,160px)_minmax(0,1fr)] items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <FilterPill
         label="Ver todo"
         count={totalCount}
@@ -411,6 +421,7 @@ function PointFiltersRow({
         tone="date"
         onClick={() => {
           onSelectPointFilter("all")
+          onSelectStaleResponseFilter("all")
           onSelectPrioridadFilter("all")
           onSelectCategoriaFilter("all")
         }}
@@ -423,9 +434,20 @@ function PointFiltersRow({
         onClick={() => onSelectPointFilter("evidence:with")}
       />
       <select
+        value={selectedStaleResponseFilter}
+        onChange={(event) => onSelectStaleResponseFilter(event.target.value)}
+        className="h-10 min-w-[150px] rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
+      >
+        {staleResponseFilterOptions.map((option) => (
+          <option key={option.key} value={option.key}>
+            {option.label} ({option.count})
+          </option>
+        ))}
+      </select>
+      <select
         value={selectedPrioridadFilter}
         onChange={(event) => onSelectPrioridadFilter(event.target.value)}
-        className="h-10 min-w-0 rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
+        className="h-10 min-w-[132px] rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
       >
         <option value="all">Prioridad</option>
         {priorityFilterOptions.map((option) => (
@@ -437,7 +459,7 @@ function PointFiltersRow({
       <select
         value={selectedCategoriaFilter}
         onChange={(event) => onSelectCategoriaFilter(event.target.value)}
-        className="h-10 min-w-0 rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
+        className="h-10 min-w-[132px] rounded-full border border-[#ddd9de] bg-white px-4 text-sm text-[#5f5f67] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
       >
         <option value="all">Categoría</option>
         {categoryFilterOptions.map((option) => (

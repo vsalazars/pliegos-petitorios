@@ -260,6 +260,7 @@ func (r *UserRepository) Update(
 	apellidoMaterno *string,
 	correo string,
 	username string,
+	passwordHash *string,
 ) (*domain.UserWithRole, error) {
 	const query = `
 		UPDATE usuarios
@@ -270,7 +271,12 @@ func (r *UserRepository) Update(
 			apellido_paterno = $5,
 			apellido_materno = $6,
 			correo = $7,
-			username = $8
+			username = $8,
+			password_hash = COALESCE($9, password_hash),
+			debe_cambiar_password = CASE
+				WHEN $9 IS NULL THEN debe_cambiar_password
+				ELSE TRUE
+			END
 		WHERE id = $1
 		RETURNING id;
 	`
@@ -291,6 +297,7 @@ func (r *UserRepository) Update(
 		apellidoMaterno,
 		correo,
 		username,
+		passwordHash,
 	).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

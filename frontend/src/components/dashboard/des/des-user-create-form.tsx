@@ -8,16 +8,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { DESRole, DESUnidad } from "@/lib/des-admin"
+import {
+  isDESRole,
+  resolveRoleDisplayName,
+  type DESAccountScope,
+  type DESRole,
+  type DESUnidad,
+} from "@/lib/des-admin"
 
 type DESUserCreateFormProps = {
   unidades: DESUnidad[]
   roles: DESRole[]
+  scope: DESAccountScope
   disabled?: boolean
   onCreated: () => Promise<void> | void
 }
 
 type FormState = {
+  ambito: DESAccountScope
   unidad_id: string
   rol_id: string
   nombre: string
@@ -29,6 +37,7 @@ type FormState = {
 }
 
 const initialForm: FormState = {
+  ambito: "UNIDAD",
   unidad_id: "",
   rol_id: "",
   nombre: "",
@@ -42,25 +51,31 @@ const initialForm: FormState = {
 export function DESUserCreateForm({
   unidades,
   roles,
+  scope,
   disabled = false,
   onCreated,
 }: DESUserCreateFormProps) {
-  const [form, setForm] = useState<FormState>(initialForm)
+  const [form, setForm] = useState<FormState>({ ...initialForm, ambito: scope })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const unidadRoles = useMemo(
     () => roles.filter((item) => item.clave.endsWith("_UNIDAD")),
     [roles],
   )
+  const desRoles = useMemo(
+    () => roles.filter((item) => isDESRole(item.clave)),
+    [roles],
+  )
+  const currentRoleOptions = form.ambito === "DES" ? desRoles : unidadRoles
 
   const canSubmit =
     !disabled &&
     !isSubmitting &&
-    form.unidad_id.trim() !== "" &&
     form.rol_id.trim() !== "" &&
     form.nombre.trim() !== "" &&
     form.correo.trim() !== "" &&
     form.username.trim() !== "" &&
+    (form.ambito === "DES" || form.unidad_id.trim() !== "") &&
     form.password.trim() !== ""
 
   const updateField = (field: keyof FormState, value: string) => {
@@ -82,7 +97,7 @@ export function DESUserCreateForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          unidad_id: Number(form.unidad_id),
+          unidad_id: form.ambito === "DES" ? null : Number(form.unidad_id),
           rol_id: Number(form.rol_id),
           nombre: form.nombre.trim(),
           apellido_paterno: emptyToNull(form.apellido_paterno),
@@ -100,9 +115,13 @@ export function DESUserCreateForm({
         return
       }
 
-      setForm(initialForm)
+      setForm({ ...initialForm, ambito: scope })
       await onCreated()
-      toast.success("Cuenta de unidad creada correctamente.")
+      toast.success(
+        form.ambito === "DES"
+          ? "Cuenta DES creada correctamente."
+          : "Cuenta de unidad creada correctamente.",
+      )
     } catch {
       toast.error("No fue posible conectar con el backend.")
     } finally {
@@ -113,9 +132,11 @@ export function DESUserCreateForm({
   return (
     <Card className="rounded-[1.8rem] border-[#ddd8de] py-0">
       <CardHeader className="px-6 pt-6">
-        <CardTitle className="text-2xl text-[#5f1024]">Crear cuenta de unidad</CardTitle>
+        <CardTitle className="text-2xl text-[#5f1024]">Crear cuenta de acceso</CardTitle>
         <CardDescription>
-          Registra usuarios operativos para una unidad académica con acceso inmediato al sistema.
+          {scope === "DES"
+            ? "Registra cuentas para perfiles DES con acceso inmediato al sistema."
+            : "Registra cuentas para unidades académicas con acceso inmediato al sistema."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-6 pb-6">
@@ -127,6 +148,19 @@ export function DESUserCreateForm({
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <SelectField
+                id="rol_id"
+                label="Perfil"
+                value={form.rol_id}
+                onChange={(value) => updateField("rol_id", value)}
+                options={currentRoleOptions.map((item) => ({
+                  value: String(item.id),
+                  label: resolveRoleDisplayName(item),
+                }))}
+              />
+            </div>
+
+            {scope === "UNIDAD" ? (
+              <SelectField
                 id="unidad_id"
                 label="Unidad académica"
                 value={form.unidad_id}
@@ -135,17 +169,7 @@ export function DESUserCreateForm({
                   .filter((item) => item.activo)
                   .map((item) => ({ value: String(item.id), label: `${item.clave} · ${item.nombre}` }))}
               />
-              <SelectField
-                id="rol_id"
-                label="Perfil"
-                value={form.rol_id}
-                onChange={(value) => updateField("rol_id", value)}
-                options={unidadRoles.map((item) => ({
-                  value: String(item.id),
-                  label: item.nombre,
-                }))}
-              />
-            </div>
+            ) : null}
 
             <div className="grid gap-4 md:grid-cols-3">
               <Field id="nombre" label="Nombre" value={form.nombre} onChange={(v) => updateField("nombre", v)} />

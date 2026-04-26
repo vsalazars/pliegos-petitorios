@@ -8,6 +8,8 @@ export type AuthUser = {
   rol_nombre?: string
   ambito: string
   nombre?: string
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   correo: string
   username: string
   activo?: boolean

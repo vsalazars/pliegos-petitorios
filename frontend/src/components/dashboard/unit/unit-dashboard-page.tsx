@@ -44,7 +44,7 @@ export function UnitDashboardPage() {
         <UnitPageHeader
           eyebrow="Unidad Académica"
           title="Dashboard"
-          description="Estamos cargando los focos de trabajo y el resumen operativo de la unidad."
+          description="Estamos cargando la numeralia operativa de puntos pendientes de la unidad."
         />
         <DashboardState
           title="Cargando dashboard"
@@ -75,7 +75,7 @@ export function UnitDashboardPage() {
       <UnitPageHeader
         eyebrow="Unidad Académica"
         title="Dashboard"
-        description="Resumen ejecutivo de la carga activa, pendientes clave y movimiento reciente de la unidad."
+        description="Numeralia operativa de puntos pendientes y su antigüedad dentro de la unidad."
       />
       <UnitDashboardContent dashboard={data.dashboard} />
     </div>

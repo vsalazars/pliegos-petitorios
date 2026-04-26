@@ -1,17 +1,5 @@
-import Link from "next/link"
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  resolveUnidadPliegoEstadoLabel,
-  resolveUnidadPliegoEstadoTone,
-} from "@/lib/unidad-display"
-import type { UnidadDashboardData, UnidadPliego } from "@/lib/unidad-dashboard"
+import { Card, CardContent } from "@/components/ui/card"
+import type { UnidadDashboardData } from "@/lib/unidad-dashboard"
 
 type UnitDashboardContentProps = {
   dashboard: UnidadDashboardData
@@ -20,29 +8,57 @@ type UnitDashboardContentProps = {
 export function UnitDashboardContent({ dashboard }: UnitDashboardContentProps) {
   const cards = [
     {
-      label: "Pliegos activos",
-      value: dashboard.resumen.pliegos_activos,
-      tone: "solid",
-    },
-    {
-      label: "Por revisar",
-      value: dashboard.resumen.pliegos_por_revisar,
-      tone: "rose",
-    },
-    {
-      label: "Con revisión final",
-      value: dashboard.resumen.pliegos_con_revision_final,
+      label: "0 a 7 días",
+      value: dashboard.resumen.puntos_antiguedad_0_7,
       tone: "green",
+      detail: "Pendientes en ventana normal",
     },
     {
-      label: "Cerrados",
-      value: dashboard.resumen.pliegos_cerrados,
-      tone: "slate",
+      label: "8 a 15 días",
+      value: dashboard.resumen.puntos_antiguedad_8_15,
+      tone: "amber",
+      detail: "Requieren seguimiento cercano",
+    },
+    {
+      label: "16 a 30 días",
+      value: dashboard.resumen.puntos_antiguedad_16_30,
+      tone: "rose",
+      detail: "Ya muestran atraso operativo",
+    },
+    {
+      label: "30+ días",
+      value: dashboard.resumen.puntos_antiguedad_mas_30,
+      tone: "solid",
+      detail: "Casos más rezagados de la unidad",
     },
   ] as const
 
   return (
     <div className="space-y-6">
+      <div className="rounded-[1.5rem] border border-[#e6dfe3] bg-white/80 px-5 py-4">
+        <p className="text-sm text-[#55555d]">
+          Esta numeralia considera solo puntos pendientes de trabajo en la unidad:
+          detectados, en atención o con observación DES.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <SummaryPill
+            label="Pendientes operativos"
+            value={dashboard.resumen.puntos_pendientes_operativos}
+            tone="slate"
+          />
+          <SummaryPill
+            label="Con observación DES"
+            value={dashboard.resumen.puntos_con_observacion_des}
+            tone="rose"
+          />
+          <SummaryPill
+            label="En validación DES"
+            value={dashboard.resumen.puntos_en_validacion_des}
+            tone="amber"
+          />
+        </div>
+      </div>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <MetricCard
@@ -50,58 +66,9 @@ export function UnitDashboardContent({ dashboard }: UnitDashboardContentProps) {
             label={card.label}
             value={card.value}
             tone={card.tone}
+            detail={card.detail}
           />
         ))}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className="rounded-[1.8rem] border-[#ddd8de] py-0">
-          <CardHeader className="px-6 pt-6">
-            <CardTitle className="text-2xl text-[#5f1024]">Pendientes clave</CardTitle>
-            <CardDescription>
-              Pliegos abiertos que todavía requieren revisión o cierre documental.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 px-6 pb-6">
-            {dashboard.alertas.sin_revision_final.length === 0 ? (
-              <EmptyState message="No hay pliegos abiertos pendientes de revisión final." />
-            ) : (
-              dashboard.alertas.sin_revision_final.map((item) => (
-                <CompactPliegoRow
-                  key={item.id}
-                  item={item}
-                  subtitle={
-                    item.estado_pliego_clave === "pendiente_revision_ocr"
-                      ? "Necesita revisión inicial"
-                      : "Sigue abierto sin cierre documental"
-                  }
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[1.8rem] border-[#ddd8de] py-0">
-          <CardHeader className="px-6 pt-6">
-            <CardTitle className="text-2xl text-[#5f1024]">Movimiento reciente</CardTitle>
-            <CardDescription>
-              Últimos pliegos registrados o actualizados para seguimiento rápido.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 px-6 pb-6">
-            {dashboard.recientes.length === 0 ? (
-              <EmptyState message="Todavía no hay movimiento reciente en esta unidad." />
-            ) : (
-              dashboard.recientes.map((item) => (
-                <CompactPliegoRow
-                  key={item.id}
-                  item={item}
-                  subtitle={`Registrado ${formatDate(item.fecha_registro)}`}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
       </section>
     </div>
   )
@@ -111,16 +78,19 @@ function MetricCard({
   label,
   value,
   tone,
+  detail,
 }: {
   label: string
   value: number
-  tone: "solid" | "rose" | "green" | "slate"
+  tone: "solid" | "rose" | "green" | "slate" | "amber"
+  detail: string
 }) {
   const toneClassName = {
     solid: "bg-[#5f1024] text-white border-[#5f1024]",
     rose: "bg-[#f8ebef] text-[#7a1730] border-[#ead5db]",
     green: "bg-[#edf6f1] text-[#2f6b4f] border-[#d5e7dc]",
     slate: "bg-[#f2f4f7] text-[#55606d] border-[#e2e7ed]",
+    amber: "bg-[#fff4de] text-[#8c5a08] border-[#f0dfbf]",
   }[tone]
 
   return (
@@ -128,67 +98,31 @@ function MetricCard({
       <CardContent className="px-5 py-5">
         <p className="text-sm opacity-80">{label}</p>
         <p className="mt-3 font-heading text-4xl tracking-tight">{value}</p>
+        <p className="mt-2 text-sm opacity-80">{detail}</p>
       </CardContent>
     </Card>
   )
 }
 
-function CompactPliegoRow({
-  item,
-  subtitle,
+function SummaryPill({
+  label,
+  value,
+  tone,
 }: {
-  item: UnidadPliego
-  subtitle: string
+  label: string
+  value: number
+  tone: "slate" | "rose" | "amber"
 }) {
-  return (
-    <Link
-      href={`/dashboard/unidad/pliegos/${item.id}`}
-      className="block rounded-[1.35rem] border border-[#ece8ec] bg-white px-4 py-4 transition hover:border-[#d8c5cc] hover:bg-[#fffdfd]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-medium text-[#404149]">{item.titulo}</p>
-          <p className="mt-1 text-sm text-[#76767d]">{item.folio}</p>
-        </div>
-        <StatusPill item={item} />
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#66666d]">
-        <span>{subtitle}</span>
-        <span>Recepción {formatDate(item.fecha_recepcion)}</span>
-        <span>{item.texto_revision_final ? "Con revisión final" : "Sin revisión final"}</span>
-      </div>
-    </Link>
-  )
-}
-
-function StatusPill({ item }: { item: UnidadPliego }) {
   const toneClassName = {
-    rose: "bg-[#f8ebef] text-[#8b2740]",
     slate: "bg-[#f2f4f7] text-[#55606d]",
-    green: "bg-[#edf6f1] text-[#2f6b4f]",
+    rose: "bg-[#f8ebef] text-[#8b2740]",
     amber: "bg-[#fff4de] text-[#8c5a08]",
-  }[resolveUnidadPliegoEstadoTone(item)]
+  }[tone]
 
   return (
-    <span className={`rounded-full px-3 py-1 text-sm font-medium ${toneClassName}`}>
-      {resolveUnidadPliegoEstadoLabel(item)}
-    </span>
-  )
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-4 text-sm text-[#66666d]">
-      {message}
+    <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${toneClassName}`}>
+      <span className="text-[11px] uppercase tracking-[0.16em] opacity-75">{label}</span>
+      <span className="font-semibold">{value}</span>
     </div>
   )
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-MX", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value))
 }

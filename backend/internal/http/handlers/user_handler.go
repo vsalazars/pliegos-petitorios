@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"pliegos-des/backend/internal/http/middleware"
 	"pliegos-des/backend/internal/repository"
 	"pliegos-des/backend/internal/services"
 	"pliegos-des/backend/pkg/response"
@@ -38,6 +39,16 @@ type UpdateUserRequest struct {
 	ApellidoMaterno  *string `json:"apellido_materno"`
 	Correo           string  `json:"correo" binding:"required"`
 	Username         string  `json:"username" binding:"required"`
+	Password         *string `json:"password"`
+}
+
+type UpdateCurrentUserRequest struct {
+	Nombre           string  `json:"nombre" binding:"required"`
+	ApellidoPaterno  *string `json:"apellido_paterno"`
+	ApellidoMaterno  *string `json:"apellido_materno"`
+	Correo           string  `json:"correo" binding:"required"`
+	Username         string  `json:"username" binding:"required"`
+	Password         *string `json:"password"`
 }
 
 type SetActivoUserRequest struct {
@@ -170,6 +181,20 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
+	var passwordHash *string
+	if req.Password != nil && strings.TrimSpace(*req.Password) != "" {
+		hashed, err := h.authService.HashPassword(strings.TrimSpace(*req.Password))
+		if err != nil {
+			if errors.Is(err, services.ErrInvalidPassword) {
+				response.Error(c, http.StatusBadRequest, "password inválido")
+				return
+			}
+			response.Error(c, http.StatusInternalServerError, "error procesando password")
+			return
+		}
+		passwordHash = &hashed
+	}
+
 	item, err := h.userRepo.Update(
 		c.Request.Context(),
 		id,
@@ -180,6 +205,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		req.ApellidoMaterno,
 		req.Correo,
 		req.Username,
+		passwordHash,
 	)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
@@ -224,6 +250,95 @@ func (h *UserHandler) SetActivo(c *gin.Context) {
 		}
 
 		response.Error(c, http.StatusInternalServerError, "error actualizando estatus de usuario")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"item": item,
+	})
+}
+
+func (h *UserHandler) UpdateCurrent(c *gin.Context) {
+	rawClaims, exists := c.Get(middleware.CurrentUserClaimsKey)
+	if !exists {
+		response.Error(c, http.StatusUnauthorized, "sesión no válida")
+		return
+	}
+
+	claims, ok := rawClaims.(*services.UserClaims)
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "claims inválidos")
+		return
+	}
+
+	currentUser, err := h.userRepo.GetByID(c.Request.Context(), claims.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			response.Error(c, http.StatusNotFound, "usuario no encontrado")
+			return
+		}
+
+		response.Error(c, http.StatusInternalServerError, "error obteniendo usuario")
+		return
+	}
+
+	var req UpdateCurrentUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "payload inválido")
+		return
+	}
+
+	req.Nombre = strings.TrimSpace(req.Nombre)
+	req.Correo = strings.TrimSpace(strings.ToLower(req.Correo))
+	req.Username = strings.TrimSpace(req.Username)
+
+	if req.Nombre == "" || req.Correo == "" || req.Username == "" {
+		response.Error(c, http.StatusBadRequest, "nombre, correo y username son obligatorios")
+		return
+	}
+
+	var passwordHash *string
+	if req.Password != nil && strings.TrimSpace(*req.Password) != "" {
+		hashed, err := h.authService.HashPassword(strings.TrimSpace(*req.Password))
+		if err != nil {
+			if errors.Is(err, services.ErrInvalidPassword) {
+				response.Error(c, http.StatusBadRequest, "password inválido")
+				return
+			}
+
+			response.Error(c, http.StatusInternalServerError, "error procesando password")
+			return
+		}
+		passwordHash = &hashed
+	}
+
+	item, err := h.userRepo.Update(
+		c.Request.Context(),
+		claims.UserID,
+		currentUser.UnidadID,
+		currentUser.RolID,
+		req.Nombre,
+		req.ApellidoPaterno,
+		req.ApellidoMaterno,
+		req.Correo,
+		req.Username,
+		passwordHash,
+	)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserCorreoDuplicado) {
+			response.Error(c, http.StatusConflict, "el correo ya existe")
+			return
+		}
+		if errors.Is(err, repository.ErrUserUsernameDuplicado) {
+			response.Error(c, http.StatusConflict, "el username ya existe")
+			return
+		}
+		if errors.Is(err, repository.ErrUserNotFound) {
+			response.Error(c, http.StatusNotFound, "usuario no encontrado")
+			return
+		}
+
+		response.Error(c, http.StatusInternalServerError, "error actualizando usuario")
 		return
 	}
 

@@ -3,7 +3,11 @@ import { NextResponse } from "next/server"
 
 import { isUnidadRole } from "@/lib/auth"
 import { AUTH_COOKIE_NAME, backendFetch } from "@/lib/backend"
-import { buildUnidadDashboard, type UnidadPliego } from "@/lib/unidad-dashboard"
+import {
+  buildUnidadDashboard,
+  type UnidadPliego,
+  type UnidadPliegoPunto,
+} from "@/lib/unidad-dashboard"
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -30,9 +34,31 @@ export async function GET() {
   }
 
   const items = (pliegosData.items ?? []) as UnidadPliego[]
+  const puntos = await fetchUnidadDashboardPoints(items, token)
 
   return NextResponse.json({
     user: meData.user,
-    dashboard: buildUnidadDashboard(items),
+    dashboard: buildUnidadDashboard(items, puntos),
   })
+}
+
+async function fetchUnidadDashboardPoints(items: UnidadPliego[], token: string) {
+  if (items.length === 0) {
+    return [] as UnidadPliegoPunto[]
+  }
+
+  const responses = await Promise.all(
+    items.map(async (item) => {
+      const response = await backendFetch(`/unidad/pliegos/${item.id}`, {}, token)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No fue posible cargar los puntos del pliego.")
+      }
+
+      return (data.puntos ?? []) as UnidadPliegoPunto[]
+    }),
+  )
+
+  return responses.flat()
 }

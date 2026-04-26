@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"pliegos-des/backend/internal/http/middleware"
+	"pliegos-des/backend/internal/repository"
 	"pliegos-des/backend/internal/services"
 	"pliegos-des/backend/pkg/response"
 
@@ -14,6 +15,7 @@ import (
 type AuthHandler struct {
 	authService *services.AuthService
 	jwtService  *services.JWTService
+	userRepo    *repository.UserRepository
 }
 
 type LoginRequest struct {
@@ -21,10 +23,15 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func NewAuthHandler(authService *services.AuthService, jwtService *services.JWTService) *AuthHandler {
+func NewAuthHandler(
+	authService *services.AuthService,
+	jwtService *services.JWTService,
+	userRepo *repository.UserRepository,
+) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		jwtService:  jwtService,
+		userRepo:    userRepo,
 	}
 }
 
@@ -98,18 +105,34 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
+	user, err := h.userRepo.GetByID(c.Request.Context(), claims.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			response.Error(c, http.StatusNotFound, "usuario no encontrado")
+			return
+		}
+
+		response.Error(c, http.StatusInternalServerError, "error obteniendo usuario")
+		return
+	}
+
 	response.OK(c, gin.H{
 		"user": gin.H{
-			"id":                    claims.UserID,
-			"unidad_id":             claims.UnidadID,
-			"unidad_clave":          claims.UnidadClave,
-			"unidad_nombre":         claims.UnidadNombre,
-			"rol_id":                claims.RolID,
-			"rol_clave":             claims.RolClave,
-			"ambito":                claims.Ambito,
-			"correo":                claims.Correo,
-			"username":              claims.Username,
-			"debe_cambiar_password": claims.DebeCambiarPassword,
+			"id":                    user.ID,
+			"unidad_id":             user.UnidadID,
+			"unidad_clave":          user.UnidadClave,
+			"unidad_nombre":         user.UnidadNombre,
+			"rol_id":                user.RolID,
+			"rol_clave":             user.RolClave,
+			"rol_nombre":            user.RolNombre,
+			"ambito":                user.Ambito,
+			"nombre":                user.Nombre,
+			"apellido_paterno":      user.ApellidoPaterno,
+			"apellido_materno":      user.ApellidoMaterno,
+			"correo":                user.Correo,
+			"username":              user.Username,
+			"activo":                user.Activo,
+			"debe_cambiar_password": user.DebeCambiarPassword,
 		},
 	})
 }

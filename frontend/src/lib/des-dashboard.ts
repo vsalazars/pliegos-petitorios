@@ -115,6 +115,8 @@ export type DESValidationQueueItem = {
   estado_punto_clave: string
   fecha_registro: string
   fecha_envio_validacion?: string | null
+  fecha_respuesta_unidad?: string | null
+  fecha_validacion_des?: string | null
   requiere_validacion: boolean
   observaciones?: string | null
   unidad_id?: number | null

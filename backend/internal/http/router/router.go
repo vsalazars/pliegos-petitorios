@@ -39,7 +39,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	authService := services.NewAuthService(cfg, userRepo)
 	jwtService := services.NewJWTService(cfg)
 
-	authHandler := handlers.NewAuthHandler(authService, jwtService)
+	authHandler := handlers.NewAuthHandler(authService, jwtService, userRepo)
 	unidadHandler := handlers.NewUnidadHandler(unidadRepo)
 	userHandler := handlers.NewUserHandler(userRepo, authService)
 	rolHandler := handlers.NewRolHandler(rolRepo)
@@ -132,6 +132,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.GET("/catalogos/estados-pliego", catalogoHandler.ListEstadosPliego)
 		unidad.GET("/catalogos/tipos-evidencia", catalogoHandler.ListTiposEvidencia)
 		unidad.GET("/catalogos/motivos-rechazo", catalogoHandler.ListMotivosRechazo)
+		unidad.PUT("/mi-cuenta", userHandler.UpdateCurrent)
 
 		// PUNTOS DEL PLIEGO
 		unidad.GET("/pliegos/:id/puntos", pliegoPuntoHandler.ListByPliegoID)
@@ -146,6 +147,8 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.POST("/pliegos/:id/puntos/:punto_id/enviar-validacion", puntoValidacionHandler.EnviarAValidacion)
 		unidad.GET("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.ListByPuntoID)
 		unidad.POST("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.Upload)
+		unidad.PUT("/pliegos/:id/puntos/:punto_id/evidencias/:evidencia_id", puntoEvidenciaHandler.UpdateByUnidadID)
+		unidad.DELETE("/pliegos/:id/puntos/:punto_id/evidencias/:evidencia_id", puntoEvidenciaHandler.DeleteByUnidadID)
 	}
 
 	return r
