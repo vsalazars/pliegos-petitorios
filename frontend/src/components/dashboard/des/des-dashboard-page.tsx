@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 
+import { DESExecutiveMobileDashboard } from "@/components/dashboard/des/des-executive-mobile-dashboard"
+import { DESExecutiveMobileShell } from "@/components/dashboard/des/des-executive-mobile-shell"
 import { DESOperationalDashboard } from "@/components/dashboard/des/des-operational-dashboard"
 import { DESUserCreateForm } from "@/components/dashboard/des/des-user-create-form"
 import { DESUserList } from "@/components/dashboard/des/des-user-list"
@@ -204,6 +206,14 @@ export function DESDashboardPage() {
   }
 
   if (viewMode === "operational" && operationalData) {
+    if (operationalData.user.rol_clave === "CONSULTA_DES") {
+      return (
+        <DESExecutiveMobileShell>
+          <DESExecutiveMobileDashboard dashboard={operationalData} />
+        </DESExecutiveMobileShell>
+      )
+    }
+
     return (
       <DashboardShell
         badge="DIRECCIÓN DE EDUCACIÓN SUPERIOR"

@@ -9,6 +9,42 @@ export type DESDashboardSummary = {
   puntos_rechazados: number
 }
 
+export type DESDashboardSLA = {
+  puntos_vencidos_7_dias: number
+  puntos_vencidos_15_dias: number
+  puntos_vencidos_30_dias: number
+  semaforo_normal_0_7: number
+  semaforo_atencion_8_15: number
+  semaforo_riesgo_16_30: number
+  semaforo_critico_mas_30: number
+}
+
+export type DESDashboardUnitSummary = {
+  unidad_id: number
+  clave: string
+  nombre: string
+  activo: boolean
+  total_pliegos: number
+  total_puntos: number
+  puntos_pendientes_operativos: number
+  puntos_detectados: number
+  puntos_en_proceso: number
+  puntos_requieren_validacion: number
+  puntos_validados: number
+  puntos_rechazados: number
+  puntos_con_observacion_des: number
+  dias_promedio_desde_registro_punto: number
+  max_dias_desde_registro_punto: number
+  max_dias_desde_recepcion_pliego: number
+  puntos_vencidos_7_dias: number
+  puntos_vencidos_15_dias: number
+  puntos_vencidos_30_dias: number
+  semaforo_normal_0_7: number
+  semaforo_atencion_8_15: number
+  semaforo_riesgo_16_30: number
+  semaforo_critico_mas_30: number
+}
+
 export type DESDashboardRecentItem = {
   id: number
   punto_id: number
@@ -67,6 +103,7 @@ export type DESDashboardOperationalData = {
     correo: string
   }
   resumen: DESDashboardSummary
+  por_unidad: DESDashboardUnitSummary[]
   recientes: {
     validaciones: DESDashboardRecentItem[]
     rechazos: DESDashboardRecentItem[]
@@ -75,6 +112,7 @@ export type DESDashboardOperationalData = {
     pendientes_validacion: number
     con_observacion_des: number
     puntos_pendientes_operativos: number
+    sla: DESDashboardSLA
     top_unidades_con_mas_puntos_pendientes: DESTopUnidadPendiente[]
     validaciones_sin_atender: DESDashboardPointItem[]
     respuestas_unidad_sin_reaccion_des: DESDashboardPointItem[]
