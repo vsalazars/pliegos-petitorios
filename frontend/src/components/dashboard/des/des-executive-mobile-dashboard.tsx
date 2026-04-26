@@ -21,8 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   DESDashboardOperationalData,
   DESEvidenceDetailItem,
-  DESDashboardSLA,
-  DESDashboardUnitSummary,
   DESValidationDetailItem,
   DESValidationQueueItem,
 } from "@/lib/des-dashboard"
@@ -43,6 +41,8 @@ export function DESExecutiveMobileDashboard({
   dashboard,
 }: DESExecutiveMobileDashboardProps) {
   const allUnitsOptionValue = "all"
+  const allCategoriesOptionValue = "all-categories"
+  const allPrioritiesOptionValue = "all-priorities"
   const loadingDetailPointIdsRef = useRef<Set<number>>(new Set())
   const [pendingPoints, setPendingPoints] = useState<DESValidationQueueItem[]>([])
   const [pointDetails, setPointDetails] = useState<
@@ -56,6 +56,8 @@ export function DESExecutiveMobileDashboard({
       }
     >
   >({})
+  const [selectedCategory, setSelectedCategory] = useState<string>(allCategoriesOptionValue)
+  const [selectedPriority, setSelectedPriority] = useState<string>(allPrioritiesOptionValue)
   const [selectedPendingPliegoId, setSelectedPendingPliegoId] = useState<number | null>(null)
   const [selectedValidatedPliegoId, setSelectedValidatedPliegoId] = useState<number | null>(null)
   const availableUnits = useMemo(
@@ -77,27 +79,86 @@ export function DESExecutiveMobileDashboard({
   const selectedUnit =
     availableUnits.find((item) => item.unidad_id === selectedUnitId) ?? availableUnits[0] ?? null
 
-  const globalMetrics = buildGlobalAttentionMetrics(dashboard.atencion_inmediata.sla)
-  const unitMetrics = selectedUnit ? buildUnitAttentionMetrics(selectedUnit) : []
-  const currentMetrics = selectedUnitId === null ? globalMetrics : unitMetrics
+  const unitScopedPoints = useMemo(
+    () => pendingPoints.filter((item) => (selectedUnitId === null ? true : item.unidad_id === selectedUnitId)),
+    [pendingPoints, selectedUnitId],
+  )
+  const availableCategoryOptions = useMemo(() => {
+    const categories = new Map<string, number>()
+
+    for (const item of unitScopedPoints) {
+      const label = item.categoria_nombre?.trim() || "Sin categoría"
+      categories.set(label, (categories.get(label) ?? 0) + 1)
+    }
+
+    return [...categories.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) => {
+        if (right.count !== left.count) {
+          return right.count - left.count
+        }
+        return left.label.localeCompare(right.label)
+      })
+  }, [unitScopedPoints])
+  const availablePriorityOptions = useMemo(() => {
+    const priorities = new Map<string, number>()
+
+    for (const item of unitScopedPoints) {
+      const label = item.prioridad_nombre.trim()
+      priorities.set(label, (priorities.get(label) ?? 0) + 1)
+    }
+
+    return [...priorities.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((left, right) => {
+        if (right.count !== left.count) {
+          return right.count - left.count
+        }
+        return left.label.localeCompare(right.label)
+      })
+  }, [unitScopedPoints])
+  const filteredExecutivePoints = useMemo(
+    () =>
+      unitScopedPoints.filter((item) => {
+        const categoryLabel = item.categoria_nombre?.trim() || "Sin categoría"
+        const matchesCategory =
+          selectedCategory === allCategoriesOptionValue || categoryLabel === selectedCategory
+        const matchesPriority =
+          selectedPriority === allPrioritiesOptionValue || item.prioridad_nombre.trim() === selectedPriority
+
+        return matchesCategory && matchesPriority
+      }),
+    [allCategoriesOptionValue, allPrioritiesOptionValue, selectedCategory, selectedPriority, unitScopedPoints],
+  )
+  const filteredOperationalPoints = useMemo(
+    () =>
+      filteredExecutivePoints.filter(
+        (item) =>
+          item.estado_punto_clave === "detectado" ||
+          item.estado_punto_clave === "en_proceso" ||
+          item.estado_punto_clave === "requiere_informacion",
+      ),
+    [filteredExecutivePoints],
+  )
+
+  const currentMetrics = buildAttentionMetricsFromPoints(filteredOperationalPoints)
   const currentTitle = selectedUnitId === null ? "Todas las unidades" : selectedUnit?.clave ?? ""
   const currentSubtitle =
     selectedUnitId === null
       ? "Consolidado general de puntos pendientes por antiguedad."
       : selectedUnit?.nombre ?? ""
-  const currentCaption =
-    selectedUnitId === null || !selectedUnit
-      ? undefined
-      : `Pendientes operativos: ${selectedUnit.puntos_pendientes_operativos} · Máximo atraso: ${selectedUnit.max_dias_desde_registro_punto} día(s)`
+  const currentCaption = [
+    `Pendientes operativos: ${filteredOperationalPoints.length}`,
+    selectedCategory === allCategoriesOptionValue ? null : `Categoría: ${selectedCategory}`,
+    selectedPriority === allPrioritiesOptionValue ? null : `Prioridad: ${selectedPriority}`,
+  ]
+    .filter(Boolean)
+    .join(" · ")
   const categoryAndPriorityTotals = useMemo(() => {
-    const filteredPoints = pendingPoints.filter((item) =>
-      selectedUnitId === null ? true : item.unidad_id === selectedUnitId,
-    )
-
     const categoryMap = new Map<string, { label: string; count: number }>()
     const priorityMap = new Map<string, { label: string; count: number }>()
 
-    for (const item of filteredPoints) {
+    for (const item of filteredExecutivePoints) {
       const categoryLabel = item.categoria_nombre?.trim() || "Sin categoría"
       const priorityLabel = item.prioridad_nombre.trim()
 
@@ -112,7 +173,7 @@ export function DESExecutiveMobileDashboard({
     }
 
     return {
-      totalPoints: filteredPoints.length,
+      totalPoints: filteredExecutivePoints.length,
       categories: [...categoryMap.values()].sort((left, right) => {
         if (right.count !== left.count) {
           return right.count - left.count
@@ -126,15 +187,12 @@ export function DESExecutiveMobileDashboard({
         return left.label.localeCompare(right.label)
       }),
     }
-  }, [pendingPoints, selectedUnitId])
+  }, [filteredExecutivePoints])
   const approvalSummary = useMemo(() => {
-    const filteredPoints = pendingPoints.filter((item) =>
-      selectedUnitId === null ? true : item.unidad_id === selectedUnitId,
-    )
-    const approvedCount = filteredPoints.filter(
+    const approvedCount = filteredExecutivePoints.filter(
       (item) => item.estado_punto_clave === "validado",
     ).length
-    const totalCount = filteredPoints.length
+    const totalCount = filteredExecutivePoints.length
     const percentage = totalCount === 0 ? 0 : Math.round((approvedCount / totalCount) * 100)
 
     return {
@@ -142,12 +200,9 @@ export function DESExecutiveMobileDashboard({
       totalCount,
       percentage,
     }
-  }, [pendingPoints, selectedUnitId])
+  }, [filteredExecutivePoints])
   const unattendedPointGroups = useMemo(() => {
-    const filteredPoints = pendingPoints
-      .filter((item) =>
-        selectedUnitId === null ? true : item.unidad_id === selectedUnitId,
-      )
+    const filteredPoints = filteredExecutivePoints
       .filter(
         (item) =>
           !item.requiere_validacion &&
@@ -194,14 +249,13 @@ export function DESExecutiveMobileDashboard({
     }
 
     return [...groups.values()]
-  }, [pendingPoints, selectedUnitId])
+  }, [filteredExecutivePoints])
   const requiresPendingPliegoSelection = unattendedPointGroups.length > 1
   const activePendingPliego = requiresPendingPliegoSelection
     ? unattendedPointGroups.find((group) => group.pliegoId === selectedPendingPliegoId) ?? null
     : unattendedPointGroups[0] ?? null
   const validatedPointGroups = useMemo(() => {
-    const filteredPoints = pendingPoints
-      .filter((item) => (selectedUnitId === null ? true : item.unidad_id === selectedUnitId))
+    const filteredPoints = filteredExecutivePoints
       .filter((item) => item.estado_punto_clave === "validado")
       .sort((left, right) => {
         const rightApprovalDate = resolveApprovedAtTimestamp(
@@ -250,7 +304,7 @@ export function DESExecutiveMobileDashboard({
     }
 
     return [...groups.values()]
-  }, [pendingPoints, pointDetails, selectedUnitId])
+  }, [filteredExecutivePoints, pointDetails])
   const requiresValidatedPliegoSelection = validatedPointGroups.length > 1
   const activeValidatedPliego = requiresValidatedPliegoSelection
     ? validatedPointGroups.find((group) => group.pliegoId === selectedValidatedPliegoId) ?? null
@@ -365,21 +419,23 @@ export function DESExecutiveMobileDashboard({
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5">
-      <section className="rounded-[1.7rem] border border-[#e4dde1] bg-white px-4 py-4 shadow-sm">
+      <section className="sticky top-[7.25rem] z-10 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-4 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur">
         <div className="space-y-1">
           <p className="text-sm font-medium text-[#5f1024]">Unidad académica</p>
-           </div>
+        </div>
 
         {availableUnits.length === 0 ? (
           <div className="mt-4 rounded-[1.35rem] border border-[#ece8ec] bg-[#faf8f9] px-4 py-4 text-sm text-[#66666d]">
             Todavía no hay unidades con actividad disponible para esta vista.
           </div>
         ) : (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <Select
               value={selectedUnitId === null ? allUnitsOptionValue : String(selectedUnitId)}
               onValueChange={(value) => {
                 setSelectedUnitId(value === allUnitsOptionValue ? null : Number(value))
+                setSelectedCategory(allCategoriesOptionValue)
+                setSelectedPriority(allPrioritiesOptionValue)
                 setSelectedPendingPliegoId(null)
                 setSelectedValidatedPliegoId(null)
               }}
@@ -399,6 +455,56 @@ export function DESExecutiveMobileDashboard({
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value)
+                  setSelectedPendingPliegoId(null)
+                  setSelectedValidatedPliegoId(null)
+                }}
+              >
+                <SelectTrigger
+                  size="default"
+                  className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                >
+                  <SelectValue placeholder="Categoría" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value={allCategoriesOptionValue}>Todas las categorías</SelectItem>
+                  {availableCategoryOptions.map((category) => (
+                    <SelectItem key={category.label} value={category.label}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedPriority}
+                onValueChange={(value) => {
+                  setSelectedPriority(value)
+                  setSelectedPendingPliegoId(null)
+                  setSelectedValidatedPliegoId(null)
+                }}
+              >
+                <SelectTrigger
+                  size="default"
+                  className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                >
+                  <SelectValue placeholder="Prioridad" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value={allPrioritiesOptionValue}>Todas las prioridades</SelectItem>
+                  {availablePriorityOptions.map((priority) => (
+                    <SelectItem key={priority.label} value={priority.label}>
+                      {priority.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
       </section>
@@ -1011,67 +1117,58 @@ function resolvePriorityDistributionTone(label: string) {
   }
 }
 
-function buildGlobalAttentionMetrics(sla: DESDashboardSLA): AttentionMetric[] {
+function buildAttentionMetricsFromPoints(points: DESValidationQueueItem[]): AttentionMetric[] {
+  let normal = 0
+  let attention = 0
+  let risk = 0
+  let critical = 0
+
+  for (const point of points) {
+    const daysOpen = daysSinceFromISO(point.fecha_registro)
+
+    if (daysOpen <= 7) {
+      normal += 1
+      continue
+    }
+    if (daysOpen <= 15) {
+      attention += 1
+      continue
+    }
+    if (daysOpen <= 30) {
+      risk += 1
+      continue
+    }
+
+    critical += 1
+  }
+
   return [
     {
       key: "normal",
       label: "0 a 7 días",
       detail: "Ventana normal de atención",
-      value: sla.semaforo_normal_0_7,
+      value: normal,
       tone: "green",
     },
     {
       key: "attention",
       label: "8 a 15 días",
       detail: "Seguimiento cercano",
-      value: sla.semaforo_atencion_8_15,
+      value: attention,
       tone: "amber",
     },
     {
       key: "risk",
       label: "16 a 30 días",
       detail: "Riesgo operativo",
-      value: sla.semaforo_riesgo_16_30,
+      value: risk,
       tone: "rose",
     },
     {
       key: "critical",
       label: "30+ días",
       detail: "Atraso crítico",
-      value: sla.semaforo_critico_mas_30,
-      tone: "solid",
-    },
-  ]
-}
-
-function buildUnitAttentionMetrics(unit: DESDashboardUnitSummary): AttentionMetric[] {
-  return [
-    {
-      key: "normal",
-      label: "0 a 7 días",
-      detail: "Pendientes en ventana normal",
-      value: unit.semaforo_normal_0_7,
-      tone: "green",
-    },
-    {
-      key: "attention",
-      label: "8 a 15 días",
-      detail: "Pendientes con atención requerida",
-      value: unit.semaforo_atencion_8_15,
-      tone: "amber",
-    },
-    {
-      key: "risk",
-      label: "16 a 30 días",
-      detail: "Pendientes con rezago visible",
-      value: unit.semaforo_riesgo_16_30,
-      tone: "rose",
-    },
-    {
-      key: "critical",
-      label: "30+ días",
-      detail: "Pendientes críticos de la unidad",
-      value: unit.semaforo_critico_mas_30,
+      value: critical,
       tone: "solid",
     },
   ]
