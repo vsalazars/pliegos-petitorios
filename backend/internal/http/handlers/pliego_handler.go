@@ -69,6 +69,15 @@ type UpdateRevisionOCRRequest struct {
 	Puntos             []UpdateRevisionOCRPuntoRequest `json:"puntos"`
 }
 
+type UpdatePliegoRequest struct {
+	Folio          string  `json:"folio" binding:"required"`
+	Titulo         string  `json:"titulo" binding:"required"`
+	Descripcion    *string `json:"descripcion"`
+	Periodo        *string `json:"periodo"`
+	Anio           *int    `json:"anio"`
+	FechaRecepcion string  `json:"fecha_recepcion" binding:"required"`
+}
+
 func NewPliegoHandler(
 	pliegoRepo *repository.PliegoRepository,
 	pliegoPuntoRepo *repository.PliegoPuntoRepository,
@@ -511,6 +520,94 @@ func (h *PliegoHandler) UpdateRevisionOCR(c *gin.Context) {
 
 	response.OK(c, gin.H{
 		"item": item,
+	})
+}
+
+func (h *PliegoHandler) UpdateByUnidadID(c *gin.Context) {
+	id, ok := parsePliegoIDParam(c)
+	if !ok {
+		return
+	}
+
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok || !scoped || unidadID == nil {
+		response.Error(c, http.StatusForbidden, "acceso no permitido")
+		return
+	}
+
+	var req UpdatePliegoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "payload inválido")
+		return
+	}
+
+	req.Folio = strings.TrimSpace(req.Folio)
+	req.Titulo = strings.TrimSpace(req.Titulo)
+
+	if req.Folio == "" || req.Titulo == "" || strings.TrimSpace(req.FechaRecepcion) == "" {
+		response.Error(c, http.StatusBadRequest, "folio, titulo y fecha_recepcion son obligatorios")
+		return
+	}
+
+	fechaRecepcion, err := time.Parse("2006-01-02", strings.TrimSpace(req.FechaRecepcion))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "fecha_recepcion inválida, usa formato YYYY-MM-DD")
+		return
+	}
+
+	item, err := h.pliegoRepo.UpdateByUnidadID(
+		c.Request.Context(),
+		id,
+		*unidadID,
+		req.Folio,
+		req.Titulo,
+		req.Descripcion,
+		req.Periodo,
+		req.Anio,
+		fechaRecepcion,
+	)
+	if err != nil {
+		if errors.Is(err, repository.ErrPliegoNotFound) {
+			response.Error(c, http.StatusNotFound, "pliego no encontrado")
+			return
+		}
+		if errors.Is(err, repository.ErrPliegoFolioDuplicado) {
+			response.Error(c, http.StatusConflict, "el folio del pliego ya existe")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "error actualizando pliego")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"item":    item,
+		"message": "Pliego actualizado correctamente.",
+	})
+}
+
+func (h *PliegoHandler) DeleteByUnidadID(c *gin.Context) {
+	id, ok := parsePliegoIDParam(c)
+	if !ok {
+		return
+	}
+
+	unidadID, scoped, ok := getScopedUnidadID(c)
+	if !ok || !scoped || unidadID == nil {
+		response.Error(c, http.StatusForbidden, "acceso no permitido")
+		return
+	}
+
+	if err := h.pliegoRepo.DeleteByUnidadID(c.Request.Context(), id, *unidadID); err != nil {
+		if errors.Is(err, repository.ErrPliegoNotFound) {
+			response.Error(c, http.StatusNotFound, "pliego no encontrado")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "error eliminando pliego")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"message": "Pliego eliminado correctamente.",
 	})
 }
 

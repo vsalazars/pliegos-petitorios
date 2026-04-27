@@ -121,6 +121,8 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.GET("/pliegos", pliegoHandler.List)
 		unidad.GET("/pliegos/:id", pliegoHandler.GetByID)
 		unidad.POST("/pliegos", pliegoHandler.Create)
+		unidad.PUT("/pliegos/:id", pliegoHandler.UpdateByUnidadID)
+		unidad.DELETE("/pliegos/:id", pliegoHandler.DeleteByUnidadID)
 		unidad.POST("/pliegos/desde-pdf", pliegoHandler.CreateDesdePDF)
 		unidad.PUT("/pliegos/:id/revision-ocr", pliegoHandler.UpdateRevisionOCR)
 		unidad.PUT("/pliegos/:id/puntos/:punto_id/completo", pliegoPuntoHandler.UpdateCompleto)

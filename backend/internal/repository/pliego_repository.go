@@ -545,3 +545,80 @@ func (r *PliegoRepository) UpdateRevisionOCRByUnidadID(
 
 	return item, nil
 }
+
+func (r *PliegoRepository) UpdateByUnidadID(
+	ctx context.Context,
+	id int64,
+	unidadID int64,
+	folio string,
+	titulo string,
+	descripcion *string,
+	periodo *string,
+	anio *int,
+	fechaRecepcion time.Time,
+) (*domain.PliegoWithEstado, error) {
+	const query = `
+		UPDATE pliegos
+		SET
+			folio = $3,
+			titulo = $4,
+			descripcion = $5,
+			periodo = $6,
+			anio = $7,
+			fecha_recepcion = $8,
+			updated_at = NOW()
+		WHERE id = $1 AND unidad_id = $2
+		RETURNING id;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	folio = strings.TrimSpace(folio)
+	titulo = strings.TrimSpace(titulo)
+
+	var pliegoID int64
+	err := r.pool.QueryRow(
+		ctx,
+		query,
+		id,
+		unidadID,
+		folio,
+		titulo,
+		descripcion,
+		periodo,
+		anio,
+		fechaRecepcion,
+	).Scan(&pliegoID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrPliegoNotFound
+		}
+		if repoErr := mapPliegoPgError(err); repoErr != nil {
+			return nil, repoErr
+		}
+		return nil, fmt.Errorf("actualizar pliego por unidad: %w", err)
+	}
+
+	return r.GetByIDAndUnidadID(ctx, pliegoID, unidadID)
+}
+
+func (r *PliegoRepository) DeleteByUnidadID(ctx context.Context, id int64, unidadID int64) error {
+	const query = `
+		DELETE FROM pliegos
+		WHERE id = $1 AND unidad_id = $2;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	cmdTag, err := r.pool.Exec(ctx, query, id, unidadID)
+	if err != nil {
+		return fmt.Errorf("eliminar pliego por unidad: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return ErrPliegoNotFound
+	}
+
+	return nil
+}

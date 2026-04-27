@@ -36,7 +36,7 @@ const initialForm: FormState = {
   titulo: "",
   descripcion: "",
   periodo: "",
-  anio: "",
+  anio: String(new Date().getFullYear()),
   fecha_recepcion: "",
   estado_pliego_id: "",
 }
@@ -227,13 +227,7 @@ export function NewPliegoDialog({ onCreated }: NewPliegoDialogProps) {
                 value={form.periodo}
                 onChange={(value) => updateField("periodo", value)}
               />
-              <Field
-                id="anio"
-                label="Año"
-                placeholder="2026"
-                value={form.anio}
-                onChange={(value) => updateField("anio", value)}
-              />
+              <AutoStateField label="Año" value={form.anio} />
               <AutoStateField
                 label="Estado inicial"
                 value={selectedFile ? "Pendiente de revisión OCR" : "Recibido"}

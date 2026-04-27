@@ -3,6 +3,9 @@ export type UnidadPliego = {
   unidad_id: number
   folio: string
   titulo: string
+  descripcion?: string | null
+  periodo?: string | null
+  anio?: number | null
   fecha_recepcion: string
   fecha_registro: string
   estado_pliego_id: number
