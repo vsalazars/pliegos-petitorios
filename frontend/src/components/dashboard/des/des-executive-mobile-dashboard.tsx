@@ -44,7 +44,9 @@ export function DESExecutiveMobileDashboard({
   const allCategoriesOptionValue = "all-categories"
   const allPrioritiesOptionValue = "all-priorities"
   const loadingDetailPointIdsRef = useRef<Set<number>>(new Set())
+  const filterBarRef = useRef<HTMLElement | null>(null)
   const [pendingPoints, setPendingPoints] = useState<DESValidationQueueItem[]>([])
+  const [filterBarHeight, setFilterBarHeight] = useState(0)
   const [pointDetails, setPointDetails] = useState<
     Record<
       number,
@@ -211,7 +213,8 @@ export function DESExecutiveMobileDashboard({
       )
       .sort((left, right) => {
         const daysDiff =
-          daysSinceFromISO(right.fecha_registro) - daysSinceFromISO(left.fecha_registro)
+          businessDaysSinceFromISO(right.fecha_registro) -
+          businessDaysSinceFromISO(left.fecha_registro)
         if (daysDiff !== 0) {
           return daysDiff
         }
@@ -417,12 +420,35 @@ export function DESExecutiveMobileDashboard({
     }
   }, [activeValidatedPliego, pointDetails])
 
+  useEffect(() => {
+    const node = filterBarRef.current
+    if (!node) {
+      return
+    }
+
+    const updateHeight = () => {
+      setFilterBarHeight(node.getBoundingClientRect().height)
+    }
+
+    updateHeight()
+
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(node)
+    window.addEventListener("resize", updateHeight)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateHeight)
+    }
+  }, [])
+
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5">
-      <section className="sticky top-[7.25rem] z-10 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-4 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-[#5f1024]">Unidad académica</p>
-        </div>
+    <div className="mx-auto flex w-full max-w-full min-w-0 flex-col gap-5 overflow-x-hidden sm:max-w-md">
+      <section
+        ref={filterBarRef}
+        className="fixed top-[6.9rem] left-1/2 z-20 w-[calc(100%-2rem)] max-w-[calc(28rem-2rem)] min-w-0 -translate-x-1/2 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-4 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur sm:top-[7.15rem]"
+      >
+       
 
         {availableUnits.length === 0 ? (
           <div className="mt-4 rounded-[1.35rem] border border-[#ece8ec] bg-[#faf8f9] px-4 py-4 text-sm text-[#66666d]">
@@ -442,7 +468,7 @@ export function DESExecutiveMobileDashboard({
             >
               <SelectTrigger
                 size="default"
-                className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
               >
                 <SelectValue placeholder="Selecciona una unidad" />
               </SelectTrigger>
@@ -456,7 +482,7 @@ export function DESExecutiveMobileDashboard({
               </SelectContent>
             </Select>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Select
                 value={selectedCategory}
                 onValueChange={(value) => {
@@ -467,7 +493,7 @@ export function DESExecutiveMobileDashboard({
               >
                 <SelectTrigger
                   size="default"
-                  className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                  className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
                 >
                   <SelectValue placeholder="Categoría" />
                 </SelectTrigger>
@@ -491,7 +517,7 @@ export function DESExecutiveMobileDashboard({
               >
                 <SelectTrigger
                   size="default"
-                  className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                  className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
                 >
                   <SelectValue placeholder="Prioridad" />
                 </SelectTrigger>
@@ -509,6 +535,12 @@ export function DESExecutiveMobileDashboard({
         )}
       </section>
 
+      <div
+        aria-hidden="true"
+        className="shrink-0"
+        style={{ height: filterBarHeight > 0 ? `${filterBarHeight + 6}px` : undefined }}
+      />
+
       <Accordion type="single" collapsible defaultValue="attention">
         <AccordionItem
           value="attention"
@@ -523,7 +555,7 @@ export function DESExecutiveMobileDashboard({
                 Tiempo de atención a los puntos del pliego
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
-                Numeralia móvil de puntos pendientes en todas las unidades y en la
+                Numeralia de puntos pendientes en todas las unidades y en la
                 unidad académica seleccionada.
               </p>
             </div>
@@ -709,7 +741,7 @@ export function DESExecutiveMobileDashboard({
                       >
                         <SelectTrigger
                           size="default"
-                          className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                          className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
                         >
                           <SelectValue placeholder="Selecciona un pliego" />
                         </SelectTrigger>
@@ -740,7 +772,7 @@ export function DESExecutiveMobileDashboard({
 
                     <div className="mt-4 space-y-3">
                       {activePendingPliego.items.map((item) => {
-                        const daysOpen = daysSinceFromISO(item.fecha_registro)
+                        const daysOpen = businessDaysSinceFromISO(item.fecha_registro)
 
                         return (
                           <article
@@ -758,7 +790,7 @@ export function DESExecutiveMobileDashboard({
                               </div>
                               <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#f7f1f3] px-3 py-1 text-sm text-[#7a1730]">
                                 <Clock3 className="size-4" />
-                                {daysOpen} d
+                                {daysOpen} dh
                               </div>
                             </div>
 
@@ -840,7 +872,7 @@ export function DESExecutiveMobileDashboard({
                       >
                         <SelectTrigger
                           size="default"
-                          className="h-12 w-full rounded-2xl border-[#ddd9de] bg-white px-4 text-sm text-[#35353b]"
+                          className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
                         >
                           <SelectValue placeholder="Selecciona un pliego" />
                         </SelectTrigger>
@@ -1125,7 +1157,7 @@ function buildAttentionMetricsFromPoints(points: DESValidationQueueItem[]): Atte
   let critical = 0
 
   for (const point of points) {
-    const daysOpen = daysSinceFromISO(point.fecha_registro)
+    const daysOpen = businessDaysSinceFromISO(point.fecha_registro)
 
     if (daysOpen <= 7) {
       normal += 1
@@ -1146,28 +1178,28 @@ function buildAttentionMetricsFromPoints(points: DESValidationQueueItem[]): Atte
   return [
     {
       key: "normal",
-      label: "0 a 7 días",
+      label: "0 a 7 días hábiles",
       detail: "Ventana normal de atención",
       value: normal,
       tone: "green",
     },
     {
       key: "attention",
-      label: "8 a 15 días",
+      label: "8 a 15 días hábiles",
       detail: "Seguimiento cercano",
       value: attention,
       tone: "amber",
     },
     {
       key: "risk",
-      label: "16 a 30 días",
+      label: "16 a 30 días hábiles",
       detail: "Riesgo operativo",
       value: risk,
       tone: "rose",
     },
     {
       key: "critical",
-      label: "30+ días",
+      label: "30+ días hábiles",
       detail: "Atraso crítico",
       value: critical,
       tone: "solid",
@@ -1210,9 +1242,38 @@ function formatExecutiveDate(value: string) {
   }).format(new Date(value))
 }
 
-function daysSinceFromISO(value: string) {
-  const diffMs = Date.now() - new Date(value).getTime()
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+function businessDaysSinceFromISO(value: string) {
+  const start = new Date(value)
+  const end = new Date()
+
+  if (Number.isNaN(start.getTime())) {
+    return 0
+  }
+
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+
+  if (start >= end) {
+    return 0
+  }
+
+  let businessDays = 0
+  const cursor = new Date(start)
+
+  while (cursor < end) {
+    cursor.setDate(cursor.getDate() + 1)
+
+    if (cursor > end) {
+      break
+    }
+
+    const day = cursor.getDay()
+    if (day !== 0 && day !== 6) {
+      businessDays += 1
+    }
+  }
+
+  return businessDays
 }
 
 function SmallTag({

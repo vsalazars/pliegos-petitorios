@@ -152,7 +152,7 @@ export function buildUnidadDashboard(
 
     resumen.puntos_pendientes_operativos += 1
 
-    const diasDesdeRegistro = daysSince(punto.fecha_registro)
+    const diasDesdeRegistro = businessDaysSince(punto.fecha_registro)
     if (diasDesdeRegistro <= 7) {
       resumen.puntos_antiguedad_0_7 += 1
       continue
@@ -187,7 +187,36 @@ function isPuntoPendienteOperativo(estadoPuntoClave: string) {
   )
 }
 
-function daysSince(value: string) {
-  const diffMs = Date.now() - new Date(value).getTime()
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+function businessDaysSince(value: string) {
+  const start = new Date(value)
+  const end = new Date()
+
+  if (Number.isNaN(start.getTime())) {
+    return 0
+  }
+
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+
+  if (start >= end) {
+    return 0
+  }
+
+  let businessDays = 0
+  const cursor = new Date(start)
+
+  while (cursor < end) {
+    cursor.setDate(cursor.getDate() + 1)
+
+    if (cursor > end) {
+      break
+    }
+
+    const day = cursor.getDay()
+    if (day !== 0 && day !== 6) {
+      businessDays += 1
+    }
+  }
+
+  return businessDays
 }

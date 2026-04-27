@@ -130,6 +130,18 @@ func (h *PliegoPuntoHandler) Create(c *gin.Context) {
 		return
 	}
 
+	estadoDetectadoID, stateErr := h.pliegoPuntoRepo.GetEstadoPuntoIDByClave(
+		c.Request.Context(),
+		"detectado",
+	)
+	if stateErr != nil {
+		response.Error(c, http.StatusInternalServerError, "no se encontró el estado inicial detectado")
+		return
+	}
+
+	req.EstadoPuntoID = estadoDetectadoID
+	req.RequiereValidacion = false
+
 	unidadID, scoped, ok := getScopedUnidadID(c)
 	if !ok {
 		return

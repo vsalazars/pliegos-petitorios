@@ -14,11 +14,11 @@ import {
 
 const STALE_RESPONSE_FILTER_OPTIONS = [
   { key: "all", label: "Sin atención de la unidad" },
-  { key: "no-response:7-14", label: "7 a 14 días", minDays: 7, maxDays: 14 },
-  { key: "no-response:15-29", label: "15 a 29 días", minDays: 15, maxDays: 29 },
-  { key: "no-response:30-89", label: "1 a 2 meses", minDays: 30, maxDays: 89 },
-  { key: "no-response:90-179", label: "3 a 5 meses", minDays: 90, maxDays: 179 },
-  { key: "no-response:180+", label: "6+ meses", minDays: 180 },
+  { key: "no-response:7-14", label: "7 a 14 días hábiles", minDays: 7, maxDays: 14 },
+  { key: "no-response:15-29", label: "15 a 29 días hábiles", minDays: 15, maxDays: 29 },
+  { key: "no-response:30-59", label: "30 a 59 días hábiles", minDays: 30, maxDays: 59 },
+  { key: "no-response:60-119", label: "60 a 119 días hábiles", minDays: 60, maxDays: 119 },
+  { key: "no-response:120+", label: "120+ días hábiles", minDays: 120 },
 ] as const
 
 type DESOperationalDashboardProps = {
@@ -574,15 +574,13 @@ function getPendingResponseDays(item: DESValidationQueueItem) {
     return null
   }
 
-  const referenceDate = item.fecha_registro
-  const referenceTime = new Date(referenceDate).getTime()
+  const pendingDays = businessDaysSince(item.fecha_registro)
 
-  if (Number.isNaN(referenceTime)) {
+  if (pendingDays < 0) {
     return null
   }
 
-  const millisecondsPerDay = 1000 * 60 * 60 * 24
-  return Math.floor((Date.now() - referenceTime) / millisecondsPerDay)
+  return pendingDays
 }
 
 function matchesStaleResponseFilter(item: DESValidationQueueItem, filterKey: string) {
@@ -632,4 +630,38 @@ function shouldCountPendingUnitResponse(item: DESValidationQueueItem) {
   }
 
   return unitResponseTime < validationTime
+}
+
+function businessDaysSince(value: string) {
+  const start = new Date(value)
+  const end = new Date()
+
+  if (Number.isNaN(start.getTime())) {
+    return -1
+  }
+
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+
+  if (start >= end) {
+    return 0
+  }
+
+  let businessDays = 0
+  const cursor = new Date(start)
+
+  while (cursor < end) {
+    cursor.setDate(cursor.getDate() + 1)
+
+    if (cursor > end) {
+      break
+    }
+
+    const day = cursor.getDay()
+    if (day !== 0 && day !== 6) {
+      businessDays += 1
+    }
+  }
+
+  return businessDays
 }

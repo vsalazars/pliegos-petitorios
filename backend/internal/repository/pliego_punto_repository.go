@@ -688,16 +688,20 @@ func (r *PliegoPuntoRepository) CreateFromOCR(
 			texto_final,
 			prioridad_id,
 			estado_punto_id,
-			origen_captura
+			origen_captura,
+			requiere_validacion
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, 'ocr');
+		VALUES ($1, $2, $3, $4, $5, $6, 'ocr', FALSE);
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	const prioridadDefault int64 = 2 // media
-	const estadoDetectado int64 = 1  // detectado
+	estadoDetectado, err := r.GetEstadoPuntoIDByClave(ctx, "detectado")
+	if err != nil {
+		return fmt.Errorf("obtener estado detectado para OCR: %w", err)
+	}
 
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -738,9 +742,10 @@ func (r *PliegoPuntoRepository) CreateFromOCRByUnidadID(
 			texto_final,
 			prioridad_id,
 			estado_punto_id,
-			origen_captura
+			origen_captura,
+			requiere_validacion
 		)
-		SELECT p.id, $3, $4, $5, $6, $7, 'ocr'
+		SELECT p.id, $3, $4, $5, $6, $7, 'ocr', FALSE
 		FROM pliegos p
 		WHERE p.id = $1 AND p.unidad_id = $2;
 	`
@@ -749,7 +754,10 @@ func (r *PliegoPuntoRepository) CreateFromOCRByUnidadID(
 	defer cancel()
 
 	const prioridadDefault int64 = 2
-	const estadoDetectado int64 = 1
+	estadoDetectado, err := r.GetEstadoPuntoIDByClave(ctx, "detectado")
+	if err != nil {
+		return fmt.Errorf("obtener estado detectado para OCR por unidad: %w", err)
+	}
 
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

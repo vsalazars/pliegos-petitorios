@@ -8,25 +8,25 @@ type UnitDashboardContentProps = {
 export function UnitDashboardContent({ dashboard }: UnitDashboardContentProps) {
   const cards = [
     {
-      label: "0 a 7 días",
+      label: "0 a 7 días hábiles",
       value: dashboard.resumen.puntos_antiguedad_0_7,
       tone: "green",
       detail: "Pendientes en ventana normal",
     },
     {
-      label: "8 a 15 días",
+      label: "8 a 15 días hábiles",
       value: dashboard.resumen.puntos_antiguedad_8_15,
       tone: "amber",
       detail: "Requieren seguimiento cercano",
     },
     {
-      label: "16 a 30 días",
+      label: "16 a 30 días hábiles",
       value: dashboard.resumen.puntos_antiguedad_16_30,
       tone: "rose",
       detail: "Ya muestran atraso operativo",
     },
     {
-      label: "30+ días",
+      label: "30+ días hábiles",
       value: dashboard.resumen.puntos_antiguedad_mas_30,
       tone: "solid",
       detail: "Casos más rezagados de la unidad",
