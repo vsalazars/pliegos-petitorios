@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
-import { Toaster } from "sonner";
+import { AppToaster } from "@/components/ui/app-toaster";
 import "./globals.css";
 
 const bodySans = Montserrat({
@@ -31,20 +31,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Toaster
-          position="top-right"
-          richColors
-          toastOptions={{
-            classNames: {
-              toast:
-                "border border-[#ddd8de] bg-white text-[#35353b] shadow-[0_20px_50px_rgba(64,42,48,0.16)]",
-              title: "font-medium text-[#35353b]",
-              description: "text-[#66666d]",
-              success: "!border-[#d3e3d8]",
-              error: "!border-[#ead5db]",
-            },
-          }}
-        />
+        <AppToaster />
       </body>
     </html>
   );

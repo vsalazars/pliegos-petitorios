@@ -149,3 +149,25 @@
     font-family: var(--font-body), sans-serif;
   }
 }
+
+[data-sonner-toaster] [data-sonner-toast].app-toast {
+  overflow: visible;
+}
+
+[data-sonner-toaster] [data-sonner-toast].app-toast [data-close-button].app-toast-close {
+  position: absolute !important;
+  right: -0.875rem !important;
+  left: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast].app-toast [data-title] {
+  display: block !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  padding-right: 0.5rem !important;
+}
