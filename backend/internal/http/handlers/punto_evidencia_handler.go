@@ -206,6 +206,51 @@ func (h *PuntoEvidenciaHandler) DownloadAdmin(c *gin.Context) {
 	c.FileAttachment(item.Archivo.RutaStorage, item.Archivo.NombreOriginal)
 }
 
+func (h *PuntoEvidenciaHandler) DownloadByUnidadID(c *gin.Context) {
+	unidadID, ok := currentUnidadIDFromClaims(c)
+	if !ok {
+		return
+	}
+
+	puntoID, ok := parsePuntoIDParam(c)
+	if !ok {
+		return
+	}
+
+	evidenciaIDValue := strings.TrimSpace(c.Param("evidencia_id"))
+	evidenciaID, err := strconv.ParseInt(evidenciaIDValue, 10, 64)
+	if err != nil || evidenciaID <= 0 {
+		response.Error(c, http.StatusBadRequest, "evidencia_id inválido")
+		return
+	}
+
+	item, err := h.evidenciaRepo.GetByIDAndUnidadID(c.Request.Context(), evidenciaID, puntoID, unidadID)
+	if err != nil {
+		if errors.Is(err, repository.ErrPuntoEvidenciaNotFound) {
+			response.Error(c, http.StatusNotFound, "evidencia no encontrada")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, "error obteniendo evidencia")
+		return
+	}
+
+	if item.Archivo.RutaStorage == "" {
+		response.Error(c, http.StatusNotFound, "archivo no disponible")
+		return
+	}
+
+	if _, err := os.Stat(item.Archivo.RutaStorage); err != nil {
+		response.Error(c, http.StatusNotFound, "archivo no encontrado en storage")
+		return
+	}
+
+	if item.Archivo.MimeType != "" {
+		c.Header("Content-Type", item.Archivo.MimeType)
+	}
+
+	c.FileAttachment(item.Archivo.RutaStorage, item.Archivo.NombreOriginal)
+}
+
 func (h *PuntoEvidenciaHandler) UpdateByUnidadID(c *gin.Context) {
 	unidadID, ok := currentUnidadIDFromClaims(c)
 	if !ok {

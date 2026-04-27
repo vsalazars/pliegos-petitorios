@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -314,6 +315,87 @@ func (r *PuntoEvidenciaRepository) GetByID(ctx context.Context, id int64) (*doma
 	)
 	if err != nil {
 		return nil, fmt.Errorf("obtener evidencia por id: %w", err)
+	}
+
+	return &item, nil
+}
+
+func (r *PuntoEvidenciaRepository) GetByIDAndUnidadID(
+	ctx context.Context,
+	evidenciaID int64,
+	puntoID int64,
+	unidadID int64,
+) (*domain.PuntoEvidenciaWithDetalle, error) {
+	const query = `
+		SELECT
+			pe.id,
+			pe.punto_id,
+			pe.archivo_id,
+			pe.tipo_evidencia_id,
+			pe.titulo,
+			pe.descripcion,
+			pe.visible_unidad,
+			pe.visible_des,
+			pe.es_vigente,
+			pe.subido_por_usuario_id,
+			pe.created_at,
+			te.clave AS tipo_evidencia_clave,
+			te.nombre AS tipo_evidencia_nombre,
+			a.id,
+			a.nombre_original,
+			a.nombre_storage,
+			a.ruta_storage,
+			a.mime_type,
+			a.extension,
+			a.tamano_bytes,
+			a.hash_sha256,
+			a.subido_por_usuario_id,
+			a.created_at
+		FROM punto_evidencias pe
+		INNER JOIN pliego_puntos pp ON pp.id = pe.punto_id
+		INNER JOIN pliegos p ON p.id = pp.pliego_id
+		INNER JOIN tipos_evidencia te ON te.id = pe.tipo_evidencia_id
+		INNER JOIN archivos a ON a.id = pe.archivo_id
+		WHERE pe.id = $1
+		  AND pe.punto_id = $2
+		  AND p.unidad_id = $3
+		LIMIT 1;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var item domain.PuntoEvidenciaWithDetalle
+	err := r.pool.QueryRow(ctx, query, evidenciaID, puntoID, unidadID).Scan(
+		&item.ID,
+		&item.PuntoID,
+		&item.ArchivoID,
+		&item.TipoEvidenciaID,
+		&item.Titulo,
+		&item.Descripcion,
+		&item.VisibleUnidad,
+		&item.VisibleDES,
+		&item.EsVigente,
+		&item.SubidoPorUsuarioID,
+		&item.CreatedAt,
+		&item.TipoEvidenciaClave,
+		&item.TipoEvidenciaNombre,
+		&item.Archivo.ID,
+		&item.Archivo.NombreOriginal,
+		&item.Archivo.NombreStorage,
+		&item.Archivo.RutaStorage,
+		&item.Archivo.MimeType,
+		&item.Archivo.Extension,
+		&item.Archivo.TamanoBytes,
+		&item.Archivo.HashSHA256,
+		&item.Archivo.SubidoPorUsuarioID,
+		&item.Archivo.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrPuntoEvidenciaNotFound
+		}
+		return nil, fmt.Errorf("obtener evidencia por id y unidad: %w", err)
 	}
 
 	return &item, nil

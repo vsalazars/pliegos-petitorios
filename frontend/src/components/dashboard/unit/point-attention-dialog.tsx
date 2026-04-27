@@ -42,6 +42,29 @@ const initialUploadForm: UploadFormState = {
   descripcion: "",
 }
 
+function getEvidenceActionLabel(item: PuntoEvidenciaItem) {
+  const mimeType = item.archivo.mime_type?.toLowerCase() ?? ""
+  const extension = item.archivo.extension?.toLowerCase() ?? ""
+  const browserViewableExtensions = new Set([
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".txt",
+  ])
+
+  const canOpenInBrowser =
+    mimeType.startsWith("image/") ||
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("text/") ||
+    browserViewableExtensions.has(extension)
+
+  return canOpenInBrowser ? "Ver archivo" : "Descargar archivo"
+}
+
 export function PointAttentionDialog({
   pliegoId,
   punto,
@@ -407,6 +430,14 @@ export function PointAttentionDialog({
                           </p>
 
                           <div className="mt-3 flex flex-wrap gap-2">
+                            <a
+                              href={`/api/unidad/pliegos/${pliegoId}/puntos/${punto.id}/evidencias/${item.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex h-9 items-center rounded-full border border-[#d6d0d6] px-3 text-sm text-[#7a1730] transition hover:border-[#5f1024] hover:text-[#5f1024]"
+                            >
+                              {getEvidenceActionLabel(item)}
+                            </a>
                             <Button
                               type="button"
                               variant="outline"

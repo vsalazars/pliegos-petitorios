@@ -146,6 +146,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		unidad.POST("/pliegos/:id/puntos/:punto_id/responder-validacion", puntoValidacionHandler.ResponderValidacion)
 		unidad.POST("/pliegos/:id/puntos/:punto_id/enviar-validacion", puntoValidacionHandler.EnviarAValidacion)
 		unidad.GET("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.ListByPuntoID)
+		unidad.GET("/pliegos/:id/puntos/:punto_id/evidencias/:evidencia_id/archivo", puntoEvidenciaHandler.DownloadByUnidadID)
 		unidad.POST("/pliegos/:id/puntos/:punto_id/evidencias", puntoEvidenciaHandler.Upload)
 		unidad.PUT("/pliegos/:id/puntos/:punto_id/evidencias/:evidencia_id", puntoEvidenciaHandler.UpdateByUnidadID)
 		unidad.DELETE("/pliegos/:id/puntos/:punto_id/evidencias/:evidencia_id", puntoEvidenciaHandler.DeleteByUnidadID)

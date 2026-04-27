@@ -62,6 +62,55 @@ export async function PUT(request: Request, context: RouteContext) {
   return NextResponse.json(data)
 }
 
+export async function GET(_request: Request, context: RouteContext) {
+  const auth = await validateUnidadAccess()
+  if ("error" in auth) {
+    return auth.error
+  }
+
+  const { id, puntoId, evidenciaId } = await context.params
+  const pliegoId = String(id).trim()
+  const normalizedPuntoId = String(puntoId).trim()
+  const normalizedEvidenciaId = String(evidenciaId).trim()
+
+  if (pliegoId === "" || normalizedPuntoId === "" || normalizedEvidenciaId === "") {
+    return NextResponse.json({ error: "identificadores inválidos" }, { status: 400 })
+  }
+
+  const response = await backendFetch(
+    `/unidad/pliegos/${pliegoId}/puntos/${normalizedPuntoId}/evidencias/${normalizedEvidenciaId}/archivo`,
+    {},
+    auth.token,
+  )
+
+  if (!response.ok) {
+    const raw = await response.text()
+    let payload: unknown = { error: raw || "No fue posible descargar el archivo." }
+
+    try {
+      payload = raw.trim() === "" ? payload : JSON.parse(raw)
+    } catch {}
+
+    return NextResponse.json(payload, { status: response.status })
+  }
+
+  const headers = new Headers()
+  const contentType = response.headers.get("content-type")
+  const contentDisposition = response.headers.get("content-disposition")
+
+  if (contentType) {
+    headers.set("Content-Type", contentType)
+  }
+  if (contentDisposition) {
+    headers.set("Content-Disposition", contentDisposition)
+  }
+
+  return new NextResponse(response.body, {
+    status: 200,
+    headers,
+  })
+}
+
 export async function DELETE(_request: Request, context: RouteContext) {
   const auth = await validateUnidadAccess()
   if ("error" in auth) {
