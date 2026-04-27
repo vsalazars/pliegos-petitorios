@@ -1,6 +1,6 @@
 "use client"
 
-import { LoaderCircle, Paperclip, Pencil, Trash2 } from "lucide-react"
+import { Download, Eye, LoaderCircle, Paperclip, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -63,6 +63,30 @@ function getEvidenceActionLabel(item: PuntoEvidenciaItem) {
     browserViewableExtensions.has(extension)
 
   return canOpenInBrowser ? "Ver archivo" : "Descargar archivo"
+}
+
+function EvidenceActionIcon({ item }: { item: PuntoEvidenciaItem }) {
+  const mimeType = item.archivo.mime_type?.toLowerCase() ?? ""
+  const extension = item.archivo.extension?.toLowerCase() ?? ""
+  const browserViewableExtensions = new Set([
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".txt",
+  ])
+
+  const canOpenInBrowser =
+    mimeType.startsWith("image/") ||
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("text/") ||
+    browserViewableExtensions.has(extension)
+
+  const Icon = canOpenInBrowser ? Eye : Download
+  return <Icon className="size-4" />
 }
 
 export function PointAttentionDialog({
@@ -434,8 +458,9 @@ export function PointAttentionDialog({
                               href={`/api/unidad/pliegos/${pliegoId}/puntos/${punto.id}/evidencias/${item.id}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex h-9 items-center rounded-full border border-[#d6d0d6] px-3 text-sm text-[#7a1730] transition hover:border-[#5f1024] hover:text-[#5f1024]"
+                              className="inline-flex h-9 items-center gap-2 rounded-full border border-[#d6d0d6] px-3 text-sm text-[#7a1730] transition hover:border-[#5f1024] hover:text-[#5f1024]"
                             >
+                              <EvidenceActionIcon item={item} />
                               {getEvidenceActionLabel(item)}
                             </a>
                             <Button
