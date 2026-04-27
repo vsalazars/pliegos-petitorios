@@ -52,23 +52,25 @@ export function LoginPanel() {
   }
 
   return (
-    <section className="rounded-[1.6rem] border border-[#ddd9de] bg-white p-6 shadow-sm">
-      <Badge className="rounded-full border-0 bg-[#f3eaed] px-3 py-1 text-[11px] tracking-[0.2em] uppercase text-[#7a1730] hover:bg-[#f3eaed]">
+    <section className="rounded-[1.45rem] border border-[#ddd9de] bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-6">
+      <Badge className="rounded-full border-0 bg-[#f3eaed] px-3 py-1 text-[10px] tracking-[0.18em] uppercase text-[#7a1730] hover:bg-[#f3eaed]">
         Acceso institucional
       </Badge>
 
-      <div className="mt-5 space-y-2">
-        <h2 className="font-heading text-4xl tracking-tight text-[#5f1024]">Iniciar sesión</h2>
-        <p className="text-sm leading-7 text-[#63636b]">
-          Usa tus credenciales institucionales para ingresar al sistema.
+      <div className="mt-4 space-y-1.5">
+        <h2 className="font-heading text-3xl tracking-tight text-[#5f1024] sm:text-[2.2rem]">
+          Iniciar sesión
+        </h2>
+        <p className="text-sm leading-6 text-[#63636b]">
+          Ingresa con tu usuario y contraseña institucional.
         </p>
       </div>
 
-      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <Field
             id="login"
             label="Usuario o correo"
-            placeholder="admin@ipn.mx"
+            placeholder="usuario@ipn.mx"
             icon={<UserRound className="size-4" />}
             focusClassName="focus-visible:border-[#8f1d35] focus-visible:ring-[#f3eaed]"
             value={login}
@@ -100,7 +102,7 @@ export function LoginPanel() {
           <Button
             type="submit"
             disabled={isSubmitting || login.trim() === "" || password.trim() === ""}
-            className="h-11 w-full rounded-full bg-[#5f1024] text-sm font-semibold text-white hover:bg-[#4f0d1d]"
+            className="mt-1 h-10 w-full rounded-full bg-[#5f1024] text-sm font-semibold text-white hover:bg-[#4f0d1d]"
           >
             {isSubmitting ? "Entrando..." : "Continuar"}
           </Button>
@@ -133,7 +135,7 @@ function Field({
   trailingAction,
 }: FieldProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <Label className="text-sm font-medium text-[#5d5d65]" htmlFor={id}>
         {label}
       </Label>
@@ -149,7 +151,7 @@ function Field({
           value={value}
           onChange={onChange}
           className={cn(
-            "h-12 rounded-2xl border-[#ddd9de] bg-white pl-11 text-sm text-[#35353b]",
+            "h-11 rounded-[1.15rem] border-[#ddd9de] bg-white pl-11 text-sm text-[#35353b]",
             trailingAction ? "pr-12" : "pr-4",
             focusClassName,
           )}

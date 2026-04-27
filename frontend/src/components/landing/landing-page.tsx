@@ -42,7 +42,7 @@ export function LandingPage() {
 
               <div className="mt-7 space-y-3">
                 <h1 className="font-heading text-3xl leading-none tracking-tight text-[#5f1024] sm:text-5xl">
-                  Sistema de Gestión de Pliegos Petitorios
+                  Sistema para la Gestión de Pliegos Petitorios
                 </h1>
                 <p className="mx-auto max-w-xl text-sm leading-7 text-[#595a62] sm:text-base">
                   Plataforma institucional para registrar, organizar y dar seguimiento

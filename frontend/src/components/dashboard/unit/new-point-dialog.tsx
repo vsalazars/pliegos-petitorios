@@ -198,7 +198,7 @@ export function NewPointDialog({
         <div className="p-6 sm:p-7">
           <DialogHeader>
             <DialogTitle className="font-heading text-3xl tracking-tight text-[#5f1024]">
-              Nuevo punto
+              Nuevo punto del pliego petitorio
             </DialogTitle>
             <DialogDescription className="text-sm leading-7 text-[#65656d]">
               Agrega manualmente un punto al pliego con su redacción final y su

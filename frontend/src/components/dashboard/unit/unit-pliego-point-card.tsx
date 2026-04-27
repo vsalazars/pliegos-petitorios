@@ -175,36 +175,49 @@ export function UnitPliegoPointCard({
     <article className="rounded-[1.35rem] border border-[#ece8ec] bg-white px-4 py-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="font-medium text-[#3f4046]">Punto {punto.numero_punto}</p>
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-[#3f4046]">Punto {punto.numero_punto}</p>
+              {!isEditing ? (
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#7a7a82]">
+                  <span>
+                    <span className="font-medium text-[#8b8b92]">Registro:</span>{" "}
+                    {formatDate(punto.fecha_registro)}
+                  </span>
+                  {punto.categoria_nombre ? (
+                    <>
+                      <span className="text-[#c4bcc1]">·</span>
+                      <span>
+                        <span className="font-medium text-[#8b8b92]">Categoría:</span>{" "}
+                        <span className="font-semibold text-[#7a1730]">
+                          {punto.categoria_nombre}
+                        </span>
+                      </span>
+                    </>
+                  ) : null}
+                  {evidenceCount > 0 ? (
+                    <>
+                      <span className="text-[#c4bcc1]">·</span>
+                      <span>
+                        <span className="font-medium text-[#8b8b92]">Evidencias:</span>{" "}
+                        {evidenceCount}
+                      </span>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
             {!isEditing ? (
               <div className="flex flex-wrap items-center gap-2">
-                <MetaBadge
-                  label="Registro"
-                  value={formatDate(punto.fecha_registro)}
-                  tone="slate"
-                />
                 <MetaBadge
                   label="Prioridad"
                   value={punto.prioridad_nombre}
                   tone={resolvePriorityTone(punto.prioridad_clave)}
                 />
-                {punto.categoria_nombre ? (
-                  <MetaBadge
-                    label="Categoría"
-                    value={punto.categoria_nombre}
-                    tone="green"
-                  />
-                ) : null}
                 <MetaBadge
                   label="Estado"
                   value={resolveDisplayStatus(punto)}
                   tone={resolveStatusToneForDisplay(punto)}
-                />
-                <MetaBadge
-                  label="Evidencias"
-                  value={String(evidenceCount)}
-                  tone={resolveEvidenceTone(punto, evidenceCount)}
                 />
               </div>
             ) : null}
@@ -476,11 +489,11 @@ function MetaBadge({
 }: {
   label: string
   value: string
-  tone: "slate" | "green" | "amber" | "red" | "rose"
+  tone: "green" | "amber" | "red" | "rose"
 }) {
   const toneClassName = {
-    slate: "bg-[#f2f4f7] text-[#55606d]",
     green: "bg-[#edf6f1] text-[#2f6b4f]",
+    slate: "bg-[#eef2f7] text-[#4a5a6a]", 
     amber: "bg-[#fff4de] text-[#8c5a08]",
     red: "bg-[#fdeaea] text-[#9d2d2d]",
     rose: "bg-[#f8ebef] text-[#8b2740]",
@@ -490,10 +503,12 @@ function MetaBadge({
     <Badge
       className={`rounded-full border-0 px-2.5 py-1 text-[12px] shadow-none hover:${toneClassName} ${toneClassName}`}
     >
-      <span className="font-medium/none uppercase tracking-[0.12em] opacity-75">
-        {label}
+      <span
+        className="text-[12px] font-semibold uppercase tracking-[0.12em]"
+        aria-label={`${label}: ${value}`}
+      >
+        {value}
       </span>
-      <span className="ml-1.5 text-[12px] font-semibold">{value}</span>
     </Badge>
   )
 }
@@ -574,21 +589,6 @@ function resolveStatusToneForDisplay(
   }
 
   return resolveStatusTone(punto.estado_punto_clave)
-}
-
-function resolveEvidenceTone(
-  punto: UnidadPliegoPunto,
-  evidenceCount: number,
-): "slate" | "green" | "amber" | "red" | "rose" {
-  if (punto.requiere_validacion) {
-    return "amber"
-  }
-
-  if (evidenceCount > 0) {
-    return "green"
-  }
-
-  return "slate"
 }
 
 function SelectField({

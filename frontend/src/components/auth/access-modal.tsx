@@ -39,8 +39,8 @@ export function AccessModal({
         </DialogTrigger>
       )}
 
-      <DialogContent className="max-w-xl gap-0 overflow-hidden rounded-[2rem] border-0 bg-transparent p-0 shadow-none sm:max-w-xl">
-        <div className="overflow-hidden rounded-[2rem] border border-[#ddd8de] bg-white/92 p-6 shadow-[0_30px_80px_rgba(64,42,48,0.18)] backdrop-blur sm:p-7">
+      <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-[1.75rem] border-0 bg-transparent p-0 shadow-none sm:max-w-lg">
+        <div className="overflow-hidden rounded-[1.75rem] border border-[#ddd8de] bg-white/92 p-4 shadow-[0_24px_64px_rgba(64,42,48,0.16)] backdrop-blur sm:p-5">
           <DialogHeader className="sr-only">
             <DialogTitle>Acceso al sistema</DialogTitle>
           </DialogHeader>

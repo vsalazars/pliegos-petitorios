@@ -74,7 +74,7 @@ export function UnitPliegosPage() {
     <div className="space-y-6">
       <UnitPageHeader
         eyebrow="Gestión de pliegos"
-        title="Pliegos"
+        title="Pliegos petitorios"
         description="Consulta el listado actual y prepara el siguiente paso para registrar nuevos pliegos desde la unidad académica."
         actions={<NewPliegoDialog onCreated={load} />}
       />
