@@ -1,7 +1,8 @@
 "use client"
 
+import { Search } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { DashboardState } from "@/components/dashboard/shared/dashboard-state"
 import { NewPointDialog } from "@/components/dashboard/unit/new-point-dialog"
@@ -29,12 +30,15 @@ type UnitPliegoDetailResponse = {
 type PointEvidenceCountMap = Record<number, number>
 
 export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
+  const pointsPerPage = 10
   const [data, setData] = useState<UnitPliegoDetailResponse | null>(null)
   const [prioridades, setPrioridades] = useState<PrioridadOption[]>([])
   const [categorias, setCategorias] = useState<CategoriaPuntoOption[]>([])
   const [evidenceCounts, setEvidenceCounts] = useState<PointEvidenceCountMap>({})
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pointSearch, setPointSearch] = useState("")
+  const [pointsPage, setPointsPage] = useState(1)
 
   const reload = async () => {
     try {
@@ -47,6 +51,7 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
       setError(null)
       setData(result.data)
       setEvidenceCounts(await fetchEvidenceCounts(result.data.item.id, result.data.puntos))
+      setPointsPage(1)
     } catch {
       setError("No fue posible conectar con el backend del pliego.")
     } finally {
@@ -103,6 +108,33 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
     }
   }, [id])
 
+  const puntos = useMemo(() => data?.puntos ?? [], [data?.puntos])
+  const filteredPoints = useMemo(() => {
+    const normalizedSearch = pointSearch.trim().toLowerCase()
+
+    return [...puntos]
+      .sort((left, right) => left.numero_punto - right.numero_punto)
+      .filter((punto) => {
+        if (normalizedSearch === "") {
+          return true
+        }
+
+        return (
+          String(punto.numero_punto).includes(normalizedSearch) ||
+          punto.texto_final.toLowerCase().includes(normalizedSearch) ||
+          (punto.categoria_nombre ?? "").toLowerCase().includes(normalizedSearch) ||
+          punto.prioridad_nombre.toLowerCase().includes(normalizedSearch) ||
+          punto.estado_punto_nombre.toLowerCase().includes(normalizedSearch)
+        )
+      })
+  }, [pointSearch, puntos])
+  const totalPointPages = Math.max(1, Math.ceil(filteredPoints.length / pointsPerPage))
+  const currentPointsPage = Math.min(pointsPage, totalPointPages)
+  const paginatedPoints = useMemo(() => {
+    const start = (currentPointsPage - 1) * pointsPerPage
+    return filteredPoints.slice(start, start + pointsPerPage)
+  }, [currentPointsPage, filteredPoints])
+
   if (isLoading) {
     return (
       <DashboardState
@@ -121,7 +153,7 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
     )
   }
 
-  const { item, puntos } = data
+  const { item } = data
   const nextNumeroPunto =
     puntos.length === 0
       ? 1
@@ -150,7 +182,7 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
               <div>
                 <CardTitle className="text-2xl text-[#5f1024]">Puntos del pliego</CardTitle>
                 <CardDescription>
-                  {puntos.length} punto(s) visibles para la unidad autenticada.
+                  {filteredPoints.length} punto(s) visible(s) para la unidad autenticada.
                 </CardDescription>
               </div>
             </div>
@@ -162,15 +194,30 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 px-6 pb-6">
+        <CardContent className="space-y-4 px-6 pb-6">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#8a8a91]" />
+            <input
+              value={pointSearch}
+              onChange={(event) => {
+                setPointSearch(event.target.value)
+                setPointsPage(1)
+              }}
+              placeholder="Buscar punto por número, texto, categoría, prioridad o estado"
+              className="h-12 w-full rounded-2xl border border-[#ddd9de] bg-white pl-11 pr-4 text-sm text-[#35353b] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
+            />
+          </div>
+
           {puntos.length === 0 ? (
             <div className="rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-4 text-sm text-[#66666d]">
               Este pliego todavía no tiene puntos registrados.
             </div>
+          ) : filteredPoints.length === 0 ? (
+            <div className="rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-4 text-sm text-[#66666d]">
+              No hay puntos que coincidan con esa búsqueda.
+            </div>
           ) : (
-            puntos
-              .sort((left, right) => left.numero_punto - right.numero_punto)
-              .map((punto) => (
+            paginatedPoints.map((punto) => (
                 <UnitPliegoPointCard
                   key={punto.id}
                   pliegoId={item.id}
@@ -182,6 +229,35 @@ export function UnitPliegoDetailPage({ id }: UnitPliegoDetailPageProps) {
                 />
               ))
           )}
+
+          {filteredPoints.length > pointsPerPage ? (
+            <div className="flex flex-col gap-3 rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-3 text-sm text-[#66666d] sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Página <span className="font-medium text-[#3e4047]">{currentPointsPage}</span> de{" "}
+                <span className="font-medium text-[#3e4047]">{totalPointPages}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPointsPage((current) => Math.max(1, current - 1))}
+                  disabled={currentPointsPage === 1}
+                  className="rounded-full border border-[#ddd9de] px-3 py-1.5 text-sm text-[#5f5f67] transition hover:border-[#c9bcc2] hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPointsPage((current) => Math.min(totalPointPages, current + 1))
+                  }
+                  disabled={currentPointsPage === totalPointPages}
+                  className="rounded-full border border-[#ddd9de] px-3 py-1.5 text-sm text-[#5f5f67] transition hover:border-[#c9bcc2] hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

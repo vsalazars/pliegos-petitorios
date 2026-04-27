@@ -1,6 +1,15 @@
 "use client"
 
-import { LoaderCircle, Pencil, Save, SendHorizonal, Trash2 } from "lucide-react"
+import {
+  CalendarDays,
+  FolderOpen,
+  LoaderCircle,
+  Paperclip,
+  Pencil,
+  Save,
+  SendHorizonal,
+  Trash2,
+} from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -180,28 +189,34 @@ export function UnitPliegoPointCard({
               <p className="font-medium text-[#3f4046]">Punto {punto.numero_punto}</p>
               {!isEditing ? (
                 <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#7a7a82]">
-                  <span>
-                    <span className="font-medium text-[#8b8b92]">Registro:</span>{" "}
-                    {formatDate(punto.fecha_registro)}
-                  </span>
+                  <InlineMetaTooltip label="Registro">
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="size-3.5 text-[#9d9da4]" />
+                      {formatDate(punto.fecha_registro)}
+                    </span>
+                  </InlineMetaTooltip>
                   {punto.categoria_nombre ? (
                     <>
                       <span className="text-[#c4bcc1]">·</span>
-                      <span>
-                        <span className="font-medium text-[#8b8b92]">Categoría:</span>{" "}
-                        <span className="font-semibold text-[#7a1730]">
-                          {punto.categoria_nombre}
+                      <InlineMetaTooltip label="Categoría">
+                        <span className="inline-flex items-center gap-1.5">
+                          <FolderOpen className="size-3.5 text-[#9d9da4]" />
+                          <span className="font-semibold text-[#7a1730]">
+                            {punto.categoria_nombre}
+                          </span>
                         </span>
-                      </span>
+                      </InlineMetaTooltip>
                     </>
                   ) : null}
                   {evidenceCount > 0 ? (
                     <>
                       <span className="text-[#c4bcc1]">·</span>
-                      <span>
-                        <span className="font-medium text-[#8b8b92]">Evidencias:</span>{" "}
-                        {evidenceCount}
-                      </span>
+                      <InlineMetaTooltip label="Evidencias">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Paperclip className="size-3.5 text-[#9d9da4]" />
+                          {evidenceCount}
+                        </span>
+                      </InlineMetaTooltip>
                     </>
                   ) : null}
                 </p>
@@ -479,6 +494,23 @@ function ActionTooltip({
         {label}
       </div>
     </div>
+  )
+}
+
+function InlineMetaTooltip({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      <span className="pointer-events-none absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#3f4046] px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-[0_10px_24px_rgba(30,31,36,0.24)] transition duration-150 group-hover:opacity-100">
+        {label}
+      </span>
+    </span>
   )
 }
 

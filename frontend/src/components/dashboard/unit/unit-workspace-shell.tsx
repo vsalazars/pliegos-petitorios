@@ -1,6 +1,17 @@
 "use client"
 
-import { FileStack, KeyRound, LayoutDashboard, LoaderCircle, LogOut, Menu, Pencil, X } from "lucide-react"
+import {
+  Eye,
+  EyeOff,
+  FileStack,
+  KeyRound,
+  LayoutDashboard,
+  LoaderCircle,
+  LogOut,
+  Menu,
+  Pencil,
+  X,
+} from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -75,6 +86,9 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
     password: "",
     password_confirmation: "",
   })
+  const [showProfilePassword, setShowProfilePassword] = useState(false)
+  const [showProfilePasswordConfirmation, setShowProfilePasswordConfirmation] =
+    useState(false)
 
   const headerCopy = useMemo(() => {
     if (pathname.startsWith("/dashboard/unidad/pliegos/")) {
@@ -378,31 +392,71 @@ export function UnitWorkspaceShell({ children }: UnitWorkspaceShellProps) {
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="profile-password">Nueva contraseña</Label>
-                  <Input
-                    id="profile-password"
-                    type="password"
-                    value={profileForm.password}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({ ...current, password: event.target.value }))
-                    }
-                    className="h-12 rounded-2xl border-[#ddd9de]"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-password"
+                      type={showProfilePassword ? "text" : "password"}
+                      value={profileForm.password}
+                      onChange={(event) =>
+                        setProfileForm((current) => ({ ...current, password: event.target.value }))
+                      }
+                      className="h-12 rounded-2xl border-[#ddd9de] pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowProfilePassword((current) => !current)}
+                      className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[#8a8a91] transition hover:bg-[#f5f1f3] hover:text-[#5f1024] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8d7de]"
+                      aria-label={
+                        showProfilePassword
+                          ? "Ocultar nueva contraseña"
+                          : "Mostrar nueva contraseña"
+                      }
+                      aria-pressed={showProfilePassword}
+                    >
+                      {showProfilePassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="profile-password-confirmation">Confirmar contraseña</Label>
-                  <Input
-                    id="profile-password-confirmation"
-                    type="password"
-                    value={profileForm.password_confirmation}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        password_confirmation: event.target.value,
-                      }))
-                    }
-                    className="h-12 rounded-2xl border-[#ddd9de]"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-password-confirmation"
+                      type={showProfilePasswordConfirmation ? "text" : "password"}
+                      value={profileForm.password_confirmation}
+                      onChange={(event) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          password_confirmation: event.target.value,
+                        }))
+                      }
+                      className="h-12 rounded-2xl border-[#ddd9de] pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowProfilePasswordConfirmation((current) => !current)
+                      }
+                      className="absolute right-3 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[#8a8a91] transition hover:bg-[#f5f1f3] hover:text-[#5f1024] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8d7de]"
+                      aria-label={
+                        showProfilePasswordConfirmation
+                          ? "Ocultar confirmación de contraseña"
+                          : "Mostrar confirmación de contraseña"
+                      }
+                      aria-pressed={showProfilePasswordConfirmation}
+                    >
+                      {showProfilePasswordConfirmation ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
