@@ -521,11 +521,11 @@ function MetaBadge({
 }: {
   label: string
   value: string
-  tone: "green" | "amber" | "red" | "rose"
+  tone: "slate" | "green" | "amber" | "red" | "rose"
 }) {
   const toneClassName = {
     green: "bg-[#edf6f1] text-[#2f6b4f]",
-    slate: "bg-[#eef2f7] text-[#4a5a6a]", 
+    slate: "bg-[#eef2f7] text-[#4a5a6a]",
     amber: "bg-[#fff4de] text-[#8c5a08]",
     red: "bg-[#fdeaea] text-[#9d2d2d]",
     rose: "bg-[#f8ebef] text-[#8b2740]",

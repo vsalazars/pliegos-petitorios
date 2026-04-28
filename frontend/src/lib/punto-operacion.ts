@@ -23,6 +23,7 @@ export type PuntoEvidenciaItem = {
     id: number
     nombre_original: string
     ruta_storage: string
+    extension?: string | null
     mime_type: string
     tamano_bytes: number
     created_at: string
