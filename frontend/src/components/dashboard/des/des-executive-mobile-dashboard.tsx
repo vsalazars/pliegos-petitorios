@@ -446,7 +446,7 @@ export function DESExecutiveMobileDashboard({
     <div className="mx-auto flex w-full max-w-full min-w-0 flex-col gap-5 overflow-x-hidden sm:max-w-md">
       <section
         ref={filterBarRef}
-        className="fixed top-[6.9rem] left-1/2 z-20 w-[calc(100%-2rem)] max-w-[calc(28rem-2rem)] min-w-0 -translate-x-1/2 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-4 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur sm:top-[7.15rem]"
+        className="fixed top-[5.65rem] left-1/2 z-20 w-[calc(100%-2rem)] max-w-[calc(28rem-2rem)] min-w-0 -translate-x-1/2 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-3 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur sm:top-[5.9rem]"
       >
        
 
@@ -538,7 +538,7 @@ export function DESExecutiveMobileDashboard({
       <div
         aria-hidden="true"
         className="shrink-0"
-        style={{ height: filterBarHeight > 0 ? `${filterBarHeight + 6}px` : undefined }}
+        style={{ height: filterBarHeight > 0 ? `${filterBarHeight + 2}px` : undefined }}
       />
 
       <Accordion type="single" collapsible defaultValue="attention">
@@ -779,19 +779,19 @@ export function DESExecutiveMobileDashboard({
                             key={item.id}
                             className="rounded-[1.35rem] border border-[#ece8ec] bg-[#fcfafb] px-4 py-4"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
                                 <p className="text-sm font-medium text-[#5f1024]">
                                   Punto {item.numero_punto}
                                 </p>
-                                <p className="mt-1 text-sm leading-6 text-[#5f6067]">
-                                  {item.texto_final}
-                                </p>
+                                <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#f7f1f3] px-3 py-1 text-sm text-[#7a1730]">
+                                  <Clock3 className="size-4" />
+                                  {daysOpen} dh
+                                </div>
                               </div>
-                              <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#f7f1f3] px-3 py-1 text-sm text-[#7a1730]">
-                                <Clock3 className="size-4" />
-                                {daysOpen} dh
-                              </div>
+                              <p className="text-sm leading-6 text-[#5f6067]">
+                                {item.texto_final}
+                              </p>
                             </div>
 
                             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -918,19 +918,17 @@ export function DESExecutiveMobileDashboard({
                             className="rounded-[1.35rem] border border-[#ece8ec] bg-[#fcfafb] px-4 py-4"
                           >
                             <div className="space-y-2">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
                                   <p className="text-sm font-medium text-[#5f1024]">
                                     Punto {item.numero_punto}
                                   </p>
-                                  <p className="mt-1 text-sm leading-6 text-[#5f6067]">
-                                    {item.texto_final}
-                                  </p>
-                                </div>
                                 <div className="inline-flex shrink-0 items-center rounded-full bg-[#edf6f1] px-3 py-1 text-sm text-[#2f6b4f]">
                                   Validado
                                 </div>
                               </div>
+                              <p className="text-sm leading-6 text-[#5f6067]">
+                                {item.texto_final}
+                              </p>
 
                               <div className="flex flex-wrap items-center gap-2 text-sm">
                                 <SmallTag label={item.prioridad_nombre} tone="amber" />
