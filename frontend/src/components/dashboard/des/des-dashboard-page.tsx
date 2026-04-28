@@ -218,6 +218,7 @@ export function DESDashboardPage() {
       <DashboardShell
         badge="DIRECCIÓN DE EDUCACIÓN SUPERIOR"
         title="Validación de las acciones de atención a los pliegos petitorios"
+        subtitle="Seguimiento operativo de las acciones registradas por las unidades académicas para atender los pliegos petitorios."
         widthClassName="w-[90%] max-w-[1800px]"
         lockViewport
       >
