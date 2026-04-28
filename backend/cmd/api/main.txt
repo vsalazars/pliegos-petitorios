@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"pliegos-des/backend/internal/app"
 
@@ -18,16 +17,8 @@ func main() {
 	}
 	defer application.Close()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = application.Config.AppPort
-	}
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("API escuchando en :%s", port)
-	if err := application.Router.Run(":" + port); err != nil {
+	log.Printf("API escuchando en :%s", application.Config.AppPort)
+	if err := application.Router.Run(":" + application.Config.AppPort); err != nil {
 		log.Fatalf("error levantando servidor: %v", err)
 	}
 }
