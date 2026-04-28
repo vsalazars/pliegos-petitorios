@@ -455,7 +455,7 @@ export function DESExecutiveMobileDashboard({
             Todavía no hay unidades con actividad disponible para esta vista.
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-2 grid grid-cols-3 gap-2">
             <Select
               value={selectedUnitId === null ? allUnitsOptionValue : String(selectedUnitId)}
               onValueChange={(value) => {
@@ -468,12 +468,12 @@ export function DESExecutiveMobileDashboard({
             >
               <SelectTrigger
                 size="default"
-                className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
+                className="h-10 w-full min-w-0 overflow-hidden rounded-xl border-[#ddd9de] bg-white px-3 text-left text-xs text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
               >
-                <SelectValue placeholder="Selecciona una unidad" />
+                <SelectValue placeholder="Unidad" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                <SelectItem value={allUnitsOptionValue}>Todas las unidades</SelectItem>
+                <SelectItem value={allUnitsOptionValue}>Unidad</SelectItem>
                 {availableUnits.map((unit) => (
                   <SelectItem key={unit.unidad_id} value={String(unit.unidad_id)}>
                     {unit.clave} · {unit.nombre}
@@ -482,55 +482,53 @@ export function DESExecutiveMobileDashboard({
               </SelectContent>
             </Select>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Select
-                value={selectedCategory}
-                onValueChange={(value) => {
-                  setSelectedCategory(value)
-                  setSelectedPendingPliegoId(null)
-                  setSelectedValidatedPliegoId(null)
-                }}
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value)
+                setSelectedPendingPliegoId(null)
+                setSelectedValidatedPliegoId(null)
+              }}
+            >
+              <SelectTrigger
+                size="default"
+                className="h-10 w-full min-w-0 overflow-hidden rounded-xl border-[#ddd9de] bg-white px-3 text-left text-xs text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
               >
-                <SelectTrigger
-                  size="default"
-                  className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
-                >
-                  <SelectValue placeholder="Categoría" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl">
-                  <SelectItem value={allCategoriesOptionValue}>Todas las categorías</SelectItem>
-                  {availableCategoryOptions.map((category) => (
-                    <SelectItem key={category.label} value={category.label}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value={allCategoriesOptionValue}>Categoría</SelectItem>
+                {availableCategoryOptions.map((category) => (
+                  <SelectItem key={category.label} value={category.label}>
+                    {category.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Select
-                value={selectedPriority}
-                onValueChange={(value) => {
-                  setSelectedPriority(value)
-                  setSelectedPendingPliegoId(null)
-                  setSelectedValidatedPliegoId(null)
-                }}
+            <Select
+              value={selectedPriority}
+              onValueChange={(value) => {
+                setSelectedPriority(value)
+                setSelectedPendingPliegoId(null)
+                setSelectedValidatedPliegoId(null)
+              }}
+            >
+              <SelectTrigger
+                size="default"
+                className="h-10 w-full min-w-0 overflow-hidden rounded-xl border-[#ddd9de] bg-white px-3 text-left text-xs text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
               >
-                <SelectTrigger
-                  size="default"
-                  className="h-12 w-full min-w-0 overflow-hidden rounded-2xl border-[#ddd9de] bg-white px-4 text-left text-sm text-[#35353b] [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:truncate"
-                >
-                  <SelectValue placeholder="Prioridad" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl">
-                  <SelectItem value={allPrioritiesOptionValue}>Todas las prioridades</SelectItem>
-                  {availablePriorityOptions.map((priority) => (
-                    <SelectItem key={priority.label} value={priority.label}>
-                      {priority.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <SelectValue placeholder="Prioridad" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value={allPrioritiesOptionValue}>Prioridad</SelectItem>
+                {availablePriorityOptions.map((priority) => (
+                  <SelectItem key={priority.label} value={priority.label}>
+                    {priority.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </section>
