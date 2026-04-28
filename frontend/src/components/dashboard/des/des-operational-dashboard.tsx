@@ -373,9 +373,9 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
     puntosFiltrados.find((item) => item.id === activePointId) ?? puntosFiltrados[0] ?? null
 
   return (
-    <div className="flex min-h-0 flex-col gap-4 lg:h-[calc(100vh-14rem)] lg:overflow-hidden">
+    <div className="flex min-h-0 flex-col gap-4 lg:h-full">
       <section className="grid gap-4 lg:min-h-0 lg:flex-1 xl:grid-cols-[0.72fr_1.28fr]">
-        <Card className="flex min-h-0 max-h-[calc(100vh-12rem)] flex-col overflow-hidden rounded-[1.8rem] border-[#ddd8de] py-0 lg:h-full lg:max-h-none">
+        <Card className="flex min-h-0 flex-col overflow-hidden rounded-[1.8rem] border-[#ddd8de] py-0 lg:h-full">
           <CardHeader className="px-6 pt-6">
             <CardTitle className="text-2xl text-[#5f1024]">Pliegos por unidad académica</CardTitle>
             <CardDescription>
@@ -416,15 +416,6 @@ export function DESOperationalDashboard({ dashboard: _dashboard }: DESOperationa
                 placeholder="Buscar pliego por folio o título"
                 className="h-12 w-full rounded-2xl border border-[#ddd9de] bg-white pl-11 pr-4 text-sm text-[#35353b] outline-none transition focus:border-[#8f1d35] focus:ring-4 focus:ring-[#f3eaed]"
               />
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#ece8ec] bg-[#faf8f9] px-4 py-3 text-sm text-[#66666d]">
-              <p>
-                <span className="font-medium text-[#3e4047]">{pliegosDeUnidad.length}</span> pliego(s)
-              </p>
-              <p className="truncate text-right text-[#7a7a82]">
-                {unidadActual?.nombre ?? "Sin unidad seleccionada"}
-              </p>
             </div>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 [scrollbar-gutter:stable]">

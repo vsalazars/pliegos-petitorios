@@ -181,7 +181,7 @@ export function NewPliegoDialog({ onCreated }: NewPliegoDialogProps) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl rounded-[1.8rem] border border-[#ddd8de] bg-white p-0 shadow-[0_30px_80px_rgba(64,42,48,0.18)] sm:max-w-2xl">
+      <DialogContent className="max-h-[88vh] w-[min(56rem,calc(100vw-2rem))] max-w-none overflow-x-hidden overflow-y-auto rounded-[1.8rem] border border-[#ddd8de] bg-white p-0 shadow-[0_30px_80px_rgba(64,42,48,0.18)] sm:max-w-none">
         <div className="p-6 sm:p-7">
           <DialogHeader>
             <DialogTitle className="font-heading text-3xl tracking-tight text-[#5f1024]">

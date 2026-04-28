@@ -446,7 +446,7 @@ export function DESExecutiveMobileDashboard({
     <div className="mx-auto flex w-full max-w-full min-w-0 flex-col gap-5 overflow-x-hidden sm:max-w-md">
       <section
         ref={filterBarRef}
-        className="fixed top-[5.65rem] left-1/2 z-20 w-[calc(100%-2rem)] max-w-[calc(28rem-2rem)] min-w-0 -translate-x-1/2 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-3 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur sm:top-[5.9rem]"
+        className="fixed inset-x-4 top-[5.65rem] z-20 min-w-0 rounded-[1.7rem] border border-[#e4dde1] bg-white/94 px-4 py-3 shadow-[0_10px_24px_rgba(95,16,36,0.08)] backdrop-blur sm:left-1/2 sm:right-auto sm:top-[5.9rem] sm:w-full sm:max-w-md sm:-translate-x-1/2"
       >
        
 
