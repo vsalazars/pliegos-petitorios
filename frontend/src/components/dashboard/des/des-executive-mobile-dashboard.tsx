@@ -549,7 +549,7 @@ export function DESExecutiveMobileDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
                 Indicador ejecutivo
               </p>
-              <h2 className="font-heading text-3xl tracking-tight text-[#5f1024]">
+              <h2 className="font-heading text-xl leading-tight tracking-tight text-[#5f1024]">
                 Tiempo de atención a los puntos del pliego
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
@@ -579,7 +579,7 @@ export function DESExecutiveMobileDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
                 Panorama ejecutivo
               </p>
-              <h2 className="font-heading text-3xl tracking-tight text-[#5f1024]">
+              <h2 className="font-heading text-xl leading-tight tracking-tight text-[#5f1024]">
                 Totales por categoría y prioridad
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
@@ -651,7 +651,7 @@ export function DESExecutiveMobileDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
                 Resultado ejecutivo
               </p>
-              <h2 className="font-heading text-3xl tracking-tight text-[#5f1024]">
+              <h2 className="font-heading text-xl leading-tight tracking-tight text-[#5f1024]">
                 Porcentaje de puntos aprobados
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
@@ -707,7 +707,7 @@ export function DESExecutiveMobileDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
                 Seguimiento ejecutivo
               </p>
-              <h2 className="font-heading text-3xl tracking-tight text-[#5f1024]">
+              <h2 className="font-heading text-xl leading-tight tracking-tight text-[#5f1024]">
                 Puntos sin atención
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
@@ -834,7 +834,7 @@ export function DESExecutiveMobileDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-[#9a8d93]">
                 Seguimiento ejecutivo
               </p>
-              <h2 className="font-heading text-3xl tracking-tight text-[#5f1024]">
+              <h2 className="font-heading text-xl leading-tight tracking-tight text-[#5f1024]">
                 Puntos atendidos y validados
               </h2>
               <p className="text-sm leading-6 text-[#6b6b73]">
