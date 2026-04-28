@@ -459,11 +459,13 @@ function Field({
   label,
   value,
   onChange,
+  type = "text",
 }: {
   id: string
   label: string
   value: string
   onChange: (value: string) => void
+  type?: string
 }) {
   return (
     <div className="space-y-2">
@@ -472,6 +474,7 @@ function Field({
       </Label>
       <Input
         id={id}
+        type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="h-11 rounded-2xl border-[#ddd9de] bg-white text-sm text-[#35353b] focus-visible:border-[#8f1d35] focus-visible:ring-[#f3eaed]"
