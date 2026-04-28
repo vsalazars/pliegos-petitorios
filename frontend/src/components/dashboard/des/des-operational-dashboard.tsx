@@ -594,7 +594,7 @@ function matchesStaleResponseFilter(item: DESValidationQueueItem, filterKey: str
   }
 
   const option = STALE_RESPONSE_FILTER_OPTIONS.find((current) => current.key === filterKey)
-  if (!option || option.minDays === undefined) {
+  if (!option || !("minDays" in option)) {
     return false
   }
 
